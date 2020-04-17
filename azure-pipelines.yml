@@ -31,7 +31,7 @@ stages:
               echo "BUILD_VERSION: $BUILD_VERSION"
             env:
               BUILD_NO: $(Build.BuildId)
-              BRANCH_NAME: $(Branch.name)
+              BRANCH_NAME: $(Build.SourceBranchName)
           - task: Docker@2
             displayName: Build an image
             inputs:
