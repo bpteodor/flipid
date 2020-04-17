@@ -1,0 +1,4 @@
+# automatically generates the schema.rs when we run the diesel migration
+# For documentation on how to configure this file, see http://diesel.rs/guides/configuring-diesel-cli
+[print_schema]
+file = "src/db/schema.rs"

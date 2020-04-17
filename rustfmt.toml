@@ -1,0 +1,10 @@
+# https://github.com/rust-lang/rustfmt/blob/master/Configurations.md
+#
+max_width = 120
+reorder_imports = true
+#wrap_comments = true
+fn_args_density = "Compressed"
+#use_small_heuristics = false
+ignore = [
+    "src/config.rs",
+]

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+    <meta content="utf-8" http-equiv="encoding">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+</head>
+
+<body>
+<!--{% raw %}-->
+<div id="app">
+    <v-app id="inspire">
+        <v-content>
+            <v-container fluid fill-height>
+                <v-layout align-center justify-center>
+                    <v-flex xs12 sm10 md6 lg4>
+
+                        <v-card class="elevation-2">
+
+                            <v-toolbar dark color="primary">
+                                <v-toolbar-title>{{ currentTitle }}</v-toolbar-title>
+                                <v-spacer></v-spacer>
+                            </v-toolbar>
+
+                            <v-alert v-model="alert" dismissable type="error" outlined>
+                                {{ alertMsg }}
+                            </v-alert>
+
+                            <v-window v-model="step">
+                                <v-window-item :value="1">
+                                    <v-card-text>
+                                        <v-form v-model="validLoginForm" ref="loginFormRef">
+                                            <v-text-field prepend-icon="far fa-user" name="username" label="Username"
+                                                          autofocus @keypress.enter="doContinue"
+                                                          :rules="nameRules" type="text" v-model="username">
+                                            </v-text-field>
+                                            <v-text-field prepend-icon="fas fa-lock" name="password" label="Password"
+                                                          type="password"
+                                                          :rules="passRules" v-model="password"
+                                                          @keypress.enter="doContinue">
+                                            </v-text-field>
+                                        </v-form>
+                                    </v-card-text>
+                                </v-window-item>
+
+
+                                <v-window-item :value="2">
+                                    <v-card-text>
+                                        <v-form ref="grantFormRef">
+                                            <v-card flat v-for="s in reqScopes" class="" :key="s">
+                                                <v-switch :label="s" :value="s" v-model="grantedScopes"></v-switch>
+                                            </v-card>
+                                        </v-form>
+                                    </v-card-text>
+                                </v-window-item>
+                            </v-window>
+
+                            <v-divider></v-divider>
+
+                            <v-card-actions class="elevation-2">
+                                <v-btn color="secondary" @click="doCancel">Cancel</v-btn>
+                                <v-spacer></v-spacer>
+                                <v-btn color="primary" @click="doContinue">Continue</v-btn>
+                            </v-card-actions>
+                        </v-card>
+
+                    </v-flex>
+                </v-layout>
+            </v-container>
+        </v-content>
+    </v-app>
+</div>
+<!--{% endraw %}-->
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script>
+    axios.defaults.timeout = 1000;
+    new Vue({
+        el: '#app',
+        vuetify: new Vuetify({
+            icons: {
+                iconfont: 'fa',
+            },
+        }),
+        data: {
+            alert: false,
+            alertMsg: null,
+            step: 1,
+            loading: false,
+            validLoginForm: true,
+            username: '',
+            nameRules: [
+                v => !!v || 'Username is required',
+                v => (v && v.length >= 3) || 'Username must have at least 3 characters'
+            ],
+            password: '',
+            passRules: [
+                v => !!v || 'Password is required',
+                //v => (v && v.length >= 6) || 'Password must have at least 6 characters'
+            ],
+            reqScopes: [],
+            grantedScopes: []
+        },
+        methods: {
+            doContinue: function() {
+                this.alert = false;
+                if (this.step == 1) {
+                    if (this.$refs.loginFormRef.validate()) this.callLogin();
+                } else if (this.step == 2) {
+                    if (this.$refs.grantFormRef.validate()) this.callConsent();
+                }
+            },
+            doCancel: function () {
+                console.log("canceling...");
+                this.loading = true;
+
+                axios.post('/idp/cancel', {})
+                    .then(this.handleSuccess).catch(this.handleError).then(this.stopLoading);
+            },
+            callLogin: function () {
+                console.log("login...");
+                this.loading = true;
+
+                axios.post('/idp/login', {
+                    username: this.username,
+                    password: this.password,
+                }).then(this.handleSuccess).catch(this.handleError).then(this.stopLoading);
+            },
+            callConsent: function () {
+                console.log("consenting...");
+                this.loading = true;
+                
+                axios.post('/idp/consent', this.grantedScopes)
+                    .then(this.handleSuccess).catch(this.handleError).then(this.stopLoading);
+            },
+            handleSuccess: function(r) {
+                console.log(r);
+                if (r.status == 200 && r.data.op === 'GRANT') {
+                    this.reqScopes = r.data.scopes;
+                    this.step = 2;
+                }
+            },
+            handleError: function (e) {
+                console.log(e);
+                if (e.response.status == 404) { 
+                    this.showAlert("Invalid username or password.")
+                } else if (e.response.status === 302) {
+                    // login was successful - redirect back to client with authorization_code
+                    window.location.href = e.response.headers['content-location'];
+                } else if (e.response.status >= 500) { 
+                    this.showAlert("Service not available. Please try again later.");
+                } else {
+                    this.showAlert(e.response.data.error);
+                }
+            },
+            stopLoading: function () {
+                this.loading = false;
+            },
+            showAlert: function (msg) {
+                this.alert = true;
+                this.alertMsg = msg;
+            },
+        },
+        computed: {
+            currentTitle () {
+                switch (this.step) {
+                    case 1: return 'Login';
+                    case 2: return 'Consent';
+                }
+            }
+        }
+    })
+</script>
+</body>
+</html>

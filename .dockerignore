@@ -1,0 +1,17 @@
+/.vscode/
+/.idea/
+*.sublime-project
+*.sublime-workspace
+
+/.git/
+
+#/src/
+#/target/rls/
+#/target/debug/build/
+#/target/debug/deps/
+#/target/debug/incremental/
+#/target/release/build/
+#/target/release/deps/
+/target
+/.env
+/config/
