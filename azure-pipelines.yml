@@ -25,6 +25,7 @@ stages:
           - bash: |
               VERSION=$(grep -E '^\s*version\s*=\s*"*"' Cargo.toml | cut -f2 -d \")
               echo "##vso[task.setvariable variable=BUILD_VERSION]$VERSION"
+              echo "BUILD_VERSION: $(BUILD_VERSION)"
           - task: Docker@1
             displayName: Build an image
             inputs:
