@@ -18,11 +18,11 @@ RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY --from=builder /src/target/release/my_openid_provider ./
+COPY --from=builder /src/target/release/flipid ./
 COPY --from=builder /src/static static/
 COPY --from=builder /src/templates templates/
 
 #USER 1000
 EXPOSE 9000
 
-CMD "./my_openid_provider"
+CMD "./flipid"

@@ -19,7 +19,7 @@ Some random stuff usefull for development.
 
 ## pack & test
 
-- build with docker: `docker build . -t bpteodor/my_openid_provider`
+- build with docker: `docker build . -t bpteodor/flipid`
 - run locally:
 
 ```bash
@@ -28,7 +28,7 @@ docker run --rm -ti -p 9000:9000 \
   -v $(pwd)/.env:/app/.env \
   -v $(pwd)/config:/app/config \
   -e "RUN_BEHIND_PROXY=true" \
-  bpteodor/my_openid_provider
+  bpteodor/flipid
 ```
 
 ## Links
