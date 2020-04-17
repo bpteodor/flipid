@@ -28,7 +28,7 @@ stages:
                 VERSION="$PRJ_VERSION.$BUILD_NO"
               fi
               echo "##vso[task.setvariable variable=BUILD_VERSION]$VERSION"
-              echo "BUILD_VERSION: $BUILD_VERSION"
+              echo "BUILD_VERSION: $VERSION"
             env:
               BUILD_NO: $(Build.BuildId)
               BRANCH_NAME: $(Build.SourceBranchName)

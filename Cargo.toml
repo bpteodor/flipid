@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 actix-web = { version = "2.0", features = ["openssl"] }
-actix-rt = "1.0"
+actix-rt = "1.1"
 actix-http = "1.0"
 actix-session = "0.3"
 actix-files = "0.2"
@@ -36,7 +36,7 @@ dotenv = "0.15"
 jsonwebtoken = "7"
 crypto-hash = "0.3"
 rand = "0.7"
-base64 = "0.11"
+base64 = "0.12"
 
 failure = "0.1"
 log = "0.4"
@@ -44,5 +44,5 @@ env_logger = "0.7"
 
 # standard crate data is left out
 [dev-dependencies]
-mockall = "0.6.0"
+mockall = "0.7.0"
 #pretty_assertions = "0.6"  not that pretty actually
