@@ -3,15 +3,22 @@ rust:
   - stable
 cache: cargo
 
+services:
+  - docker
+
 jobs:
   include:
-    - stage: Compile
+    - stage: compile
       script: cargo build
-    - stage: Test
+    - stage: test
       script: cargo test
+    - stage: dockerize
+      script: docker build . -t bpteodor/flipid
+    - script: echo "$DOCKER_PASSWORD" | docker login -u bpteodor --password-stdin && docker push bpteodor/flipid
 
 stages:
   - compile
   - test
+  - dockerize
 #  - name: deploy
 #    if: branch = master

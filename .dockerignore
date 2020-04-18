@@ -1,17 +1,21 @@
-/.vscode/
-/.idea/
+.vscode/
+.idea/
 *.sublime-project
 *.sublime-workspace
 
-/.git/
+# all files starting with .
+.*
 
-#/src/
-#/target/rls/
-#/target/debug/build/
-#/target/debug/deps/
-#/target/debug/incremental/
-#/target/release/build/
-#/target/release/deps/
-/target
-/.env
-/config/
+src/
+migrations/
+tests/
+
+target/debug/*
+!target/debug/flipid
+
+target/release/*
+!target/release/flipid
+
+config/
+
+*.md
