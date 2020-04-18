@@ -1,9 +1,10 @@
-# Docker
 # Build a Docker image
 # https://docs.microsoft.com/azure/devops/pipelines/languages/docker
 
 trigger:
-  - master
+  branches:
+    include:
+      - "*" # must quote
 
 resources:
   - repo: self
