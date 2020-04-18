@@ -47,7 +47,7 @@ pub fn oauth_token_exp() -> i64 {
         .unwrap()
 }
 pub fn oauth_rsa_pem() -> String {
-    std::env::var("OAUTH_JWT_RSA_PEM").expect("OAUTH_JWT_PEM must be set")
+    std::env::var("OAUTH_JWT_RSA_PEM").expect("OAUTH_JWT_RSA_PEM must be set")
 }
 pub fn oauth_supported_scopes() -> String {
     std::env::var("OAUTH_SCOPES").unwrap_or("openid profile email phone address".into())

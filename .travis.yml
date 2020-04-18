@@ -2,6 +2,16 @@ language: rust
 rust:
   - stable
 cache: cargo
-script:
-  - cargo build
-  - cargo test
+
+jobs:
+  include:
+    - stage: Compile
+      script: cargo build
+    - stage: Test
+      script: cargo test
+
+stages:
+  - compile
+  - test
+#  - name: deploy
+#    if: branch = master

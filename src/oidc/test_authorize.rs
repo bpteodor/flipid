@@ -13,7 +13,7 @@ fn init_tests() {
 
 #[actix_rt::test]
 async fn test_authorize_get_goto_login() {
-    dotenv().ok();
+    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
     oauth_db
@@ -38,7 +38,7 @@ async fn test_authorize_get_goto_login() {
 
 #[actix_rt::test]
 async fn test_authorize_get_no_params() {
-    dotenv().ok();
+    dotenv::from_filename("tests/resources/.env").ok();
     let mut app = test::init_service(
         App::new()
             .data(mock_app_state())
