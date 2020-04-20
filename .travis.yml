@@ -6,6 +6,11 @@ cache: cargo
 services:
   - docker
 
+env:
+  global:
+    - DOCKER_USER="bpteodor"
+    - CONTAINER_NAME="$DOCKER_USER/flipid"
+
 jobs:
   include:
     - stage: compile
@@ -13,7 +18,17 @@ jobs:
     - stage: test
       script: cargo test
     - stage: dockerize
-      script: docker build . -t bpteodor/flipid && echo "$DOCKER_PASSWORD" | docker login -u bpteodor --password-stdin && docker push bpteodor/flipid
+      script:
+        - PRJ_VERSION=$(grep -E '^\s*version\s*=\s*"*"' Cargo.toml | cut -f2 -d \");
+          if [ "${TRAVIS_BRANCH}" == "master" ]; then
+          VERSION="$PRJ_VERSION.$TRAVIS_BUILD_NUMBER";
+          else
+          VERSION=$PRJ_VERSION-SNAMPSHOT;
+          fi
+        - IMG_ID=$(docker build . -q -t $CONTAINER_NAME)
+        - docker tag $IMG_ID $CONTAINER_NAME:$VERSION
+        - echo "$DOCKER_PASSWORD" | docker login -u $DOCKER_USER --password-stdin
+        - docker push $CONTAINER_NAME
 
 stages:
   - compile
