@@ -2,7 +2,7 @@
 FROM debian:buster-slim
 LABEL maintainer="teos@bran.tech"
 
-ENV PROFILE debug
+ARG PROFILE=debug
 
 #RUN apk update && apk upgrade && apk add --no-cache openssl sqlite
 RUN apt-get update && apt-get upgrade -y \
