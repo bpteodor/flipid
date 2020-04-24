@@ -17,18 +17,24 @@ Some random stuff usefull for development.
 - install diesel cli: `cargo install diesel_cli --no-default-features --features sqlite`
 - create test db (sqlite): `diesel migration run`
 
-## pack & test
+## Build
 
-- build with docker: `docker build . -t flip-id`
-- run locally:
+- with cargo: `cargo build`
+- with docker: `docker run --rm -ti -v $(pwd):/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo build`
+
+## build container & run
+
+- build container image: `docker build . -t my-flipid`
+- run locally: `docker run -ti -p 9000:9000   -v ${pwd}:/app   -e "RUN_BEHIND_PROXY=true" -w /app  my-flipid` or
 
 ```bash
-docker run --rm -ti -p 9000:9000 \
+docker run -ti -p 9000:9000 --name flip-id \
   -v $(pwd)/target/test.db:/app/target/test.db \
-  -v $(pwd)/.env:/app/.env \
-  -v $(pwd)/config:/app/config \
+  -v $(pwd)/.env:/app/.env:ro \
+  -v $(pwd)/config:/app/config:ro \
+  -w /app \
   -e "RUN_BEHIND_PROXY=true" \
-  flip-id
+  my-flipid
 ```
 
 ## Links

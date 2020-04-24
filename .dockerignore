@@ -10,11 +10,11 @@ src/
 migrations/
 tests/
 
-target/debug/*
-!target/debug/flipid
+#target/debug/*
+#!target/debug/flipid
 
-target/release/*
-!target/release/flipid
+#target/release/*
+#!target/release/flipid
 
 config/
 

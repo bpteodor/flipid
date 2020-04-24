@@ -9,10 +9,10 @@ services:
 jobs:
   include:
     - stage: compile
-      script: cargo build
+      script: docker run --rm -ti -v $(pwd):/work -v $TRAVIS_BUILD_DIR/target:/work/target -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo build
     - stage: test
-      script: cargo test
-    - stage: dockerize
+      script: docker run --rm -ti -v $(pwd):/work -v $TRAVIS_BUILD_DIR/target:/work/target -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo test
+    - stage: dockerize and push
       script: docker build . -t bpteodor/flipid && echo "$DOCKER_PASSWORD" | docker login -u bpteodor --password-stdin && docker push bpteodor/flipid
 
 stages:
