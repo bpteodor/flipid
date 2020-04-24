@@ -14,13 +14,14 @@ env:
   global:
     - DOCKER_USER="bpteodor"
     - CONTAINER_NAME="$DOCKER_USER/flipid"
+    - CARGO_ARGS="--rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/repository:/usr/local/cargo/repository -w /work"
 
 jobs:
   include:
     - stage: compile
-      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo build
-    - stage: test
-      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo test
+      script: 
+        - docker run $CARGO_ARGS rust cargo build
+        - docker run $CARGO_ARGS rust cargo test
     - stage: dockerize
       script:
         - PRJ_VERSION=$(grep -E '^\s*version\s*=\s*"*"' Cargo.toml | cut -f2 -d \");
