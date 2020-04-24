@@ -5,6 +5,7 @@
 
 # all files starting with .
 .*
+!.env
 
 src/
 migrations/
