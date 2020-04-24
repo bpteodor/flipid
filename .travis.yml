@@ -3,12 +3,11 @@ language: minimal
 services:
   - docker
 
-cache: cargo
-#cache:
-#  directories:
-#  - $TRAVIS_BUILD_DIR/target
-#  - $HOME/.cargo
-
+#cache: cargo
+cache:
+  directories:
+  - $TRAVIS_BUILD_DIR/target
+  - $HOME/.cargo
 
 env:
   global:
@@ -19,6 +18,8 @@ env:
 jobs:
   include:
     - stage: compile
+      before_install:
+        - docker pull rust
       script: 
         - docker run $CARGO_ARGS rust cargo build
         - docker run $CARGO_ARGS rust cargo test
@@ -37,7 +38,6 @@ jobs:
 
 stages:
   - compile
-  - test
   - dockerize
 #  - name: deploy
 #    if: branch = master
