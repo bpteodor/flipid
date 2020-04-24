@@ -18,9 +18,9 @@ env:
 jobs:
   include:
     - stage: compile
-      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust:alpine cargo build
+      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo build
     - stage: test
-      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust:alpine cargo test
+      script: docker run --rm -ti -v $TRAVIS_BUILD_DIR:/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo test
     - stage: dockerize
       script:
         - PRJ_VERSION=$(grep -E '^\s*version\s*=\s*"*"' Cargo.toml | cut -f2 -d \");
