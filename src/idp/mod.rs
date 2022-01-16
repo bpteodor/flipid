@@ -84,10 +84,11 @@ fn generate_callback(
         .fetch_client_config(client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
-    let auth_code = rand::thread_rng()
+    let auth_code : String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10)
-        .collect::<String>();
+        .map(char::from)
+        .collect();
 
     let auth_code_exp = Utc::now()
         .naive_utc()

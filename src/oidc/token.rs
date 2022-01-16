@@ -48,10 +48,11 @@ pub async fn token_endpoint(
             }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
-            let access_token = rand::thread_rng()
+            let access_token : String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(30)
-                .collect::<String>();
+                .map(char::from)
+                .collect();
 
             let id_token = gen_id_token(&state, session, &access_token)?;
             core::json_ok(id_token)
