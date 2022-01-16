@@ -44,7 +44,7 @@ use jwt::EncodingKey;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
-#[actix_rt::main]
+#[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
 
