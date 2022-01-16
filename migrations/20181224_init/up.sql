@@ -5,7 +5,9 @@ CREATE TABLE oauth_clients (
   secret VARCHAR NOT NULL,
   name VARCHAR NOT NULL,
   callback_url VARCHAR NOT NULL,
-  allowed_scopes VARCHAR NOT NULL
+  allowed_scopes VARCHAR NOT NULL,
+  logout_uri VARCHAR NULL, 
+  post_logout_redirect_uri VARCHAR NULL
 );
 
 CREATE TABLE oauth_scopes (
