@@ -69,12 +69,12 @@ async fn main() -> std::io::Result<()> {
                 "/.well-known/openid-configuration",
                 web::get().to(oidc::discovery::openid_config),
             )
-            .route("/op/authorize", web::get().to(oidc::authorize::auth_get))
-            .route("/op/authorize", web::post().to(oidc::authorize::auth_post))
-            .route("/op/token", web::post().to(oidc::token::token_endpoint))
-            .route("/op/userinfo", web::get().to(oidc::userinfo::userinfo_endoint))
-            .route("/op/userinfo", web::post().to(oidc::userinfo::userinfo_endoint))
-            .route("/op/jwks", web::get().to(oidc::jwks::get_keys))
+            .route("/oauth/authorize", web::get().to(oidc::authorize::auth_get))
+            .route("/oauth/authorize", web::post().to(oidc::authorize::auth_post))
+            .route("/oauth/token", web::post().to(oidc::token::token_endpoint))
+            .route("/oauth/userinfo", web::get().to(oidc::userinfo::userinfo_endoint))
+            .route("/oauth/userinfo", web::post().to(oidc::userinfo::userinfo_endoint))
+            .route("/oauth/jwks", web::get().to(oidc::jwks::get_keys))
             // identity provider (should be customizable)
             .route("/idp/login", web::post().to(idp::login))
             .route("/idp/consent", web::post().to(idp::consent))
