@@ -13,10 +13,10 @@ pub async fn openid_config(_req: HttpRequest) -> Result<HttpResponse> {
 
     let prov_config = OIDCProviderConfig {
         issuer: issuer_url.clone(),
-        authorization_endpoint: issuer_url.clone() + "/op/authorize",
-        token_endpoint: issuer_url.clone() + "/op/token",
-        userinfo_endpoint: Some(issuer_url.clone() + "/op/userinfo"),
-        jwks_uri: issuer_url.clone() + "/op/jwks",
+        authorization_endpoint: issuer_url.clone() + "/oauth/authorize",
+        token_endpoint: issuer_url.clone() + "/oauth/token",
+        userinfo_endpoint: Some(issuer_url.clone() + "/oauth/userinfo"),
+        jwks_uri: issuer_url.clone() + "/oauth/jwks",
         scopes_supported: Some(supported_scopes()),
         response_types_supported: vec!["code".into()], // TODO support more flows (at least token)
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more
@@ -31,6 +31,8 @@ pub async fn openid_config(_req: HttpRequest) -> Result<HttpResponse> {
         ],
         claims_supported: Some(vec!["sub".into()]),
         acr_values_supported: Some(SUPPORTED_ACR_VALUES.to_vec()),
+        check_session_endpoint: issuer_url.clone() + "/oauth/check_session",
+        end_session_endpoint: issuer_url.clone() + "/oauth/end_session",
         ..Default::default()
     };
 
@@ -65,6 +67,8 @@ pub struct OIDCProviderConfig {
     id_token_signing_alg_values_supported: Vec<String>, // RS256 must be included
     // ...
     claims_supported: Option<Vec<String>>, // RECOMENDED, default: ["authorization_code", "implicit"]
+    check_session_endpoint: String,
+    end_session_endpoint: String,
                                            // ...
                                            // TODO add all fields
 }

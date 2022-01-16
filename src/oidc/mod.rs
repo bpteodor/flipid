@@ -4,6 +4,7 @@ pub mod discovery;
 pub mod jwks;
 pub mod token;
 pub mod userinfo;
+pub mod session;
 
 #[cfg(test)]
 mod test_authorize;

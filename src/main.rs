@@ -75,6 +75,8 @@ async fn main() -> std::io::Result<()> {
             .route("/oauth/userinfo", web::get().to(oidc::userinfo::userinfo_endoint))
             .route("/oauth/userinfo", web::post().to(oidc::userinfo::userinfo_endoint))
             .route("/oauth/jwks", web::get().to(oidc::jwks::get_keys))
+            .route("/oauth/check_session", web::get().to(oidc::session::check_session))
+            .route("/oauth/end_session", web::get().to(oidc::session::end_session))
             // identity provider (should be customizable)
             .route("/idp/login", web::post().to(idp::login))
             .route("/idp/consent", web::post().to(idp::consent))

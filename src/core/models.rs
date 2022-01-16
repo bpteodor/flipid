@@ -16,6 +16,9 @@ pub struct OauthClient {
     // TODO: add support for multiple URLs
     // the (space separated) scopes allowed for the client to request
     pub allowed_scopes: String,
+    // URIs for logout (RP logout & post_logout)
+    pub logout_uri: String, 
+    pub post_logout_redirect_uri: String,
 }
 
 impl OauthClient {

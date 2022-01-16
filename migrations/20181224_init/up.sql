@@ -67,13 +67,13 @@ CREATE TABLE granted_scopes (
 
 
 INSERT INTO oauth_scopes(name) VALUES('openid'), ('profile'), ('email');
-INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUES
-  ('test-app1', 'secret', 'TestApp1', '["http://localhost:8080/callback"]', 'openid profile email phone address'),
-  ('test-app2', 'secret', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb"]', 'openid profile'),
-  ('oidcdebugger', 'oidcdebugger', 'oidc Debugger', '["https://oidcdebugger.com/debug"]', 'openid profile email'),
-  ('cert', 'cert123!', 'cert', '["https://op.certification.openid.net:62156/authz_cb","https://op.certification.openid.net:62156/authz_post"]', 'openid profile email'),
-  ('cert2', 'cert123!', 'cert2', '["https://op.certification.openid.net:61505/authz_cb","https://op.certification.openid.net:61505/authz_post"]', 'openid profile email phone'),
-  ('cert3', 'theLastTry', 'cert3', '["https://op.certification.openid.net:62158/authz_cb","https://op.certification.openid.net:62158/authz_post"]', 'openid profile email phone')
+INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes, logout_uri, post_logout_redirect_uri) VALUES
+  ('test-app1', 'secret', 'TestApp1', '["http://localhost:8080/callback"]', 'openid profile email phone address', 'http://localhost:8080/logout', '["http://localhost:8080/post-logout"]'),
+  ('test-app2', 'secret', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb"]', 'openid profile', 'http://localhost:8080/logout', null),
+  ('oidcdebugger', 'oidcdebugger', 'oidc Debugger', '["https://oidcdebugger.com/debug"]', 'openid profile email', null,null),
+  ('cert', 'cert123!', 'cert', '["https://op.certification.openid.net:62156/authz_cb","https://op.certification.openid.net:62156/authz_post"]', 'openid profile email', null,null),
+  ('cert2', 'cert123!', 'cert2', '["https://op.certification.openid.net:61505/authz_cb","https://op.certification.openid.net:61505/authz_post"]', 'openid profile email phone', null,null),
+  ('cert3', 'theLastTry', 'cert3', '["https://op.certification.openid.net:62158/authz_cb","https://op.certification.openid.net:62158/authz_post"]', 'openid profile email phone', null,null)
 ;
 -- pass is 'test'
 -- NOTE: THE PASSWORDS ARE HASHED

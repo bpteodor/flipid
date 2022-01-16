@@ -13,6 +13,8 @@ table! {
         name -> Text,
         callback_url -> Text,
         allowed_scopes -> Text,
+        logout_uri -> Text, 
+        post_logout_redirect_uri -> Text,
     }
 }
 
