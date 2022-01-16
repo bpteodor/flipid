@@ -174,13 +174,14 @@ impl OauthDatabase for DbSqlBridge {
 impl UserDatabase for DbSqlBridge {
     fn login(&self, uid: &str, pass: &str) -> Result<models::User, InternalError> {
         use self::schema::users::dsl::*;
-        trace!("login({})...", uid);
+        debug!("login(user: '{}')...", uid);
+        trace!("pass: {}", pass); // delete this
 
         let mut items = users
             .filter(id.eq(uid))
             .filter(password.eq(pass))
             .load::<models::User>(get_conn!(self))
-            .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
+            .map_err(|e| InternalError::query_fail(&format!("error loading user {}: {:?}", uid, e)))?;
 
         if items.len() < 1 {
             return Err(NotFound);

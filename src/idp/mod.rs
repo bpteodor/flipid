@@ -32,7 +32,6 @@ pub struct GrantScopesResponse {
 pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Session)) -> Result<HttpResponse> {
     let pass_bytes = form.password.to_owned().into_bytes();
     let pass = hex_digest(Hash::SHA256, &pass_bytes);
-    trace!("pass: {}", pass);
     let user = state.user_db.login(&form.username, &pass)?;
     info!("user {} authenticated", &form.username);
     session.set("subject", &user.id)?;
