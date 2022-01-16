@@ -76,8 +76,9 @@ INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUE
   ('cert3', 'theLastTry', 'cert3', '["https://op.certification.openid.net:62158/authz_cb","https://op.certification.openid.net:62158/authz_post"]', 'openid profile email phone')
 ;
 -- pass is 'test'
+-- NOTE: THE PASSWORDS ARE HASHED
 INSERT INTO users VALUES 
-('max', '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', 
+('max', '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b', 
   'max@test.local', "+401234567", 'Max', 'Muster', 'Maxy', 'Stuttgart', '1980-04-01', 'de-DE'),
-('rik', '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', 
+('rik', '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b', 
   'erika@test.local', "+49938568", 'Erika', 'Muster', 'rik', 'Berlin', '1969-03-07', 'en-DE');

@@ -1,8 +1,9 @@
-use super::super::db::schema::{oauth_sessions, oauth_tokens};
+use super::super::db::schema::{oauth_sessions, oauth_tokens, oauth_clients, oauth_scopes, users};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Queryable, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Insertable, Debug, Clone)]
+#[table_name = "oauth_clients"]
 pub struct OauthClient {
     /// the `client_id` as described in the spec
     pub id: String,
@@ -23,7 +24,8 @@ impl OauthClient {
     }
 }
 
-#[derive(Serialize, Queryable)]
+#[derive(Serialize, Queryable, Insertable)]
+#[table_name = "oauth_scopes"]
 pub struct OauthScope {
     pub name: String,
     pub description: String,
@@ -54,7 +56,8 @@ pub struct OauthToken {
     pub created: NaiveDateTime,
 }
 
-#[derive(Queryable, Debug)]
+#[derive(Queryable, Insertable, Debug)]
+#[table_name = "users"]
 pub struct User {
     pub id: String,
     pub password: String,

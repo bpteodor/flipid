@@ -32,7 +32,6 @@ pub struct GrantScopesResponse {
 pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Session)) -> Result<HttpResponse> {
     let pass_bytes = form.password.to_owned().into_bytes();
     let pass = hex_digest(Hash::SHA256, &pass_bytes);
-    trace!("pass: {}", pass);
     let user = state.user_db.login(&form.username, &pass)?;
     info!("user {} authenticated", &form.username);
     session.set("subject", &user.id)?;
@@ -84,10 +83,11 @@ fn generate_callback(
         .fetch_client_config(client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
-    let auth_code = rand::thread_rng()
+    let auth_code : String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10)
-        .collect::<String>();
+        .map(char::from)
+        .collect();
 
     let auth_code_exp = Utc::now()
         .naive_utc()
