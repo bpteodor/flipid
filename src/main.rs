@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
+            .app_data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
             .wrap(init_session())

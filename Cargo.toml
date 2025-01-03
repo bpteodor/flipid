@@ -3,7 +3,7 @@
 [package]
 name = "flipid"
 description = "A lightweight Openid Provider"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Teodor Bran <teos@bran.tech>"]
 keywords = ["openid", "oidc", "login", "authentication"]
 license = "Apache-2.0"
@@ -22,12 +22,12 @@ tera = "1.0"  # template for the web pages (https://tera.netlify.com/docs)
 serde_derive = "1.0"
 serde = "1.0"
 serde_json = "1.0"
-serde_urlencoded = "0.7.1"
+serde_urlencoded = "0.7"
 
 futures = "0.3"
 url = "2.5.4"
 
-diesel = { version = "1.4", features = ["sqlite", "r2d2", "chrono"] }
+diesel = { version = "2.2", features = ["sqlite", "r2d2", "chrono"] }
 r2d2 = "0.8"
 chrono = "0.4"
 dotenv = "0.15"

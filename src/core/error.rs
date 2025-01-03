@@ -47,7 +47,7 @@ impl ResponseError for AppError {
 
 ///
 #[derive(Fail, Debug)]
-pub enum InternalError {
+pub enum InternalError{
     #[fail(display = "db connection error")]
     ConnectionError,
     #[fail(display = "query: {}", msg)]
