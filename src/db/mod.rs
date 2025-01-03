@@ -183,7 +183,8 @@ impl OauthDatabase for DbSqlBridge {
 impl UserDatabase for DbSqlBridge {
     fn login(&self, uid: &str, pass: &str) -> Result<models::User, InternalError> {
         use self::schema::users::dsl::*;
-        trace!("login({})...", uid);
+        debug!("login(user: '{}')...", uid);
+        trace!("pass: {}", pass); // delete this
 
         let mut conn = get_connection(self)?;
 

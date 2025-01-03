@@ -7,7 +7,7 @@ version = "0.1.1"
 authors = ["Teodor Bran <teos@bran.tech>"]
 keywords = ["openid", "oidc", "login", "authentication"]
 license = "Apache-2.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 actix-web = { version = "4.9.0", features = ["openssl"] }
@@ -31,7 +31,7 @@ diesel = { version = "2.2", features = ["sqlite", "r2d2", "chrono"] }
 r2d2 = "0.8"
 chrono = "0.4"
 dotenv = "0.15"
-#uuid = { version = "0.8", features = ["serde", "v4"] }
+uuid = { version = "0.8", features = ["serde", "v4"] }
 
 jsonwebtoken = "9.3"
 crypto-hash = "0.3"

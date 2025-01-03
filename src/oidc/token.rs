@@ -48,7 +48,7 @@ pub async fn token_endpoint(
             }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
-            let access_token = rand::thread_rng()
+            let access_token : String = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(30)
                 .map(char::from)
