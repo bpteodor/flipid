@@ -1,5 +1,4 @@
-use actix_http::ResponseBuilder;
-use actix_web::{http::StatusCode, HttpResponse, ResponseError};
+use actix_web::{http::StatusCode, HttpResponse, HttpResponseBuilder, ResponseError};
 use failure::Fail;
 
 /// displayable error
@@ -31,7 +30,7 @@ impl AppError {
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         info!("{:?}", self);
-        ResponseBuilder::new(self.status_code())
+        HttpResponseBuilder::new(self.status_code())
             .content_type("text/html; charset=utf-8")
             .body(self.to_string())
     }
@@ -76,7 +75,7 @@ impl InternalError {
 impl ResponseError for InternalError {
     fn error_response(&self) -> HttpResponse {
         error!("{}", self);
-        ResponseBuilder::new(self.status_code())
+        HttpResponseBuilder::new(self.status_code())
             .content_type("text/html; charset=utf-8")
             .body(self.to_string())
     }

@@ -4,6 +4,7 @@ pub mod models;
 use self::error::{AppError, InternalError};
 use crate::core::error::AppError::ValidationError;
 use actix_web::error::ErrorInternalServerError;
+use actix_web::http::header::ContentType;
 use actix_web::http::StatusCode;
 use actix_web::Error;
 use actix_web::{HttpResponse, Result};
@@ -49,9 +50,9 @@ pub fn send_json<T: serde::Serialize>(status: StatusCode, obj: T) -> Result<Http
     trace!("sending json: [{}] {}", status, content); // can be sensible content
 
     Ok(HttpResponse::build(status)
-        .content_type("application/json")
-        .header("Cache-Control", "no-store")
-        .header("Pragma", "no-cache")
+        .content_type(ContentType::json())
+        .insert_header(("Cache-Control", "no-store"))
+        .insert_header(("Pragma", "no-cache"))
         .body(content))
 }
 
