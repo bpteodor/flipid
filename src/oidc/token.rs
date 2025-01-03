@@ -51,6 +51,7 @@ pub async fn token_endpoint(
             let access_token = rand::thread_rng()
                 .sample_iter(&Alphanumeric)
                 .take(30)
+                .map(char::from)
                 .collect::<String>();
 
             let id_token = gen_id_token(&state, session, &access_token)?;

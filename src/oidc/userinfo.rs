@@ -1,9 +1,8 @@
 use crate::core::{send_json, AppState};
-use actix_http::ResponseBuilder;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use actix_web::{HttpRequest, HttpResponse, Result};
+use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, Result};
 
 ///GET /userinfo
 ///
@@ -73,8 +72,8 @@ pub async fn userinfo_endoint((req, ctx): (HttpRequest, Data<AppState>)) -> Resu
 fn err_resp(status: StatusCode, error: &str, error_description: &str) -> HttpResponse {
     let www_auth = format!("error=\"{}\",error_description=\"{}\"", error, error_description);
     info!("userInfo error: {}", &www_auth);
-    ResponseBuilder::new(status)
-        .header("www-authenticate", www_auth)
+    HttpResponseBuilder::new(status)
+        .append_header(("www-authenticate", www_auth))
         .content_type("text/html; charset=utf-8")
         .body(String::from(error))
 }

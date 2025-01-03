@@ -2,6 +2,8 @@ use crate::core::error::AppError::InternalError;
 use crate::{config, core};
 use actix_web::http::StatusCode;
 use actix_web::{HttpRequest, HttpResponse, Result};
+use base64::prelude::BASE64_URL_SAFE_NO_PAD;
+use base64::Engine;
 use openssl::rsa::Rsa;
 
 /**
@@ -13,8 +15,9 @@ pub async fn get_keys(_r: HttpRequest) -> Result<HttpResponse> {
 
     // TODO add support for multiple key (key rotation)
     let kid = "1";
-    let exponent: String = base64::encode_config(&rsa.e().to_vec(), base64::URL_SAFE_NO_PAD);
-    let modulus: String = base64::encode_config(&rsa.n().to_vec(), base64::URL_SAFE_NO_PAD);
+    let exponent: String = BASE64_URL_SAFE_NO_PAD.encode(&rsa.e().to_vec());
+    // base64::encode_config(&rsa.e().to_vec(), base64::URL_SAFE_NO_PAD);
+    let modulus: String = BASE64_URL_SAFE_NO_PAD.encode(&rsa.n().to_vec());
 
     let keys = vec![Jwk::rsa_sig(kid, &exponent, &modulus)];
     core::send_json(StatusCode::OK, Jwks { keys })
