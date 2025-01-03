@@ -5,7 +5,7 @@
 
 Lightweight OpenID Provider implemented in rust.
 
-Aims to be: secure, fast, simple.
+Aims: secure, fast, simple.
 
 Currently supported features:
 
@@ -13,6 +13,15 @@ Currently supported features:
 - Authorization Code flow
 
 How to run locally (for development): [development.md](https://github.com/bpteodor/flipid/blob/master/development.md).
+
+## Build
+
+```sh
+# install requirements:
+apt install libssl-dev libsqlite3-dev
+# build
+cargo build
+```
 
 ## instalation & configuration
 

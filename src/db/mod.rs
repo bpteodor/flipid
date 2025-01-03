@@ -1,10 +1,11 @@
 use super::core::error::InternalError;
-use super::core::error::InternalError::{ConnectionError, NotFound};
+use super::core::error::InternalError::NotFound;
 use super::core::models;
 use super::core::{OauthDatabase, UserDatabase};
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::result::Error::QueryBuilderError;
+use r2d2::PooledConnection;
 use std::collections::HashSet;
 
 //pub mod models;
@@ -14,10 +15,11 @@ pub mod schema;
 #[derive(Clone)]
 pub struct DbSqlBridge(pub Pool<ConnectionManager<SqliteConnection>>);
 
-macro_rules! get_conn {
-    ( $x:expr ) => {
-        &$x.0.get().map_err(|_| ConnectionError)?
-    };
+pub type DbPooledConnection = PooledConnection<ConnectionManager<SqliteConnection>>;
+
+fn get_connection(br: &DbSqlBridge) -> Result<DbPooledConnection, InternalError> {
+    br.0.get()
+        .map_err(|_e| InternalError::query_fail("Cannot get DB connection"))
 }
 
 impl OauthDatabase for DbSqlBridge {
@@ -25,8 +27,8 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_clients::dsl::*;
         trace!("fetch_client_config({})...", client_id);
 
-        let conn = self.0.get().map_err(|e| QueryBuilderError(Box::from(e)))?;
-        let item = oauth_clients.find(client_id).first::<models::OauthClient>(&conn)?;
+        let mut conn = get_connection(self).map_err(|e| QueryBuilderError(Box::from("failed to get DB conection")))?;
+        let item = oauth_clients.find(client_id).first::<models::OauthClient>(&mut conn)?;
 
         trace!("client-config: {:?}", item);
         Ok(item)
@@ -35,9 +37,11 @@ impl OauthDatabase for DbSqlBridge {
     // TODO:- delete expired sessions
     fn save_oauth_session(&self, session: models::OauthSession) -> Result<(), InternalError> {
         trace!("save_oauth_session({:?})...", session);
+        let mut conn = get_connection(self)?;
         diesel::insert_into(schema::oauth_sessions::table)
             .values(&session)
-            .execute(get_conn!(self))
+            .execute(&mut conn)
+            //.execute(get_conn!(self))
             .map_err(|_| InternalError::query_fail("error saving new oauth session"))?;
         Ok(())
     }
@@ -68,15 +72,16 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_sessions::dsl::*;
         trace!("fetch_oauth_session_by_code({})...", code);
 
-        let conn = get_conn!(self);
+        let mut conn = get_connection(self)?;
+
         let mut items = oauth_sessions
             .filter(auth_code.eq(code))
-            .load::<models::OauthSession>(conn)
+            .load::<models::OauthSession>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading oauth session by code {}", code)))?;
 
         diesel::delete(oauth_sessions)
             .filter(auth_code.eq(code))
-            .execute(conn)
+            .execute(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error deleting oauth session by code {}", code)))?;
 
         if items.len() < 1 {
@@ -145,9 +150,11 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_tokens::dsl::*;
         trace!("saving token {:?}", data);
 
+        let mut conn = get_connection(self)?;
+
         diesel::insert_into(oauth_tokens)
             .values(data)
-            .execute(get_conn!(self))
+            .execute(&mut conn)
             .map_err(|_| InternalError::query_fail("error saving new oauth token"))?;
         Ok(())
     }
@@ -156,9 +163,11 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_tokens::dsl::*;
         trace!("load_token_data({})...", t);
 
+        let mut conn = get_connection(self)?;
+
         let mut items = oauth_tokens
             .filter(token.eq(t))
-            .load::<models::OauthToken>(get_conn!(self))
+            .load::<models::OauthToken>(&mut conn)
             .map_err(|_| InternalError::query_fail("error loading token"))?;
 
         if items.len() < 1 {
@@ -177,11 +186,13 @@ impl UserDatabase for DbSqlBridge {
         debug!("login(user: '{}')...", uid);
         trace!("pass: {}", pass); // delete this
 
+        let mut conn = get_connection(self)?;
+
         let mut items = users
             .filter(id.eq(uid))
             .filter(password.eq(pass))
-            .load::<models::User>(get_conn!(self))
-            .map_err(|e| InternalError::query_fail(&format!("error loading user {}: {:?}", uid, e)))?;
+            .load::<models::User>(&mut conn)
+            .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
         if items.len() < 1 {
             return Err(NotFound);
@@ -196,9 +207,11 @@ impl UserDatabase for DbSqlBridge {
         use self::schema::users::dsl::*;
         trace!("login({})...", uid);
 
+        let mut conn = get_connection(self)?;
+
         let mut items = users
             .filter(id.eq(uid))
-            .load::<models::User>(get_conn!(self))
+            .load::<models::User>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
         if items.len() < 1 {
@@ -214,11 +227,13 @@ impl UserDatabase for DbSqlBridge {
         use self::schema::granted_scopes::dsl::*;
         trace!("fetch_granted_scopes({}, {})...", cid, uid);
 
+        let mut conn = get_connection(self)?;
+
         let items = granted_scopes
             .select(scope)
             .filter(user_id.eq(uid))
             .filter(client_id.eq(cid))
-            .load::<String>(get_conn!(self))
+            .load::<String>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading scopes [cid: {}, uid: {}]", cid, uid)))?;
 
         debug!("loaded scopes(cid: {}, uid: {}) = {:?}", cid, uid, &items);
@@ -229,8 +244,7 @@ impl UserDatabase for DbSqlBridge {
         use self::schema::granted_scopes::dsl::*;
         trace!("save_granted_scopes({}, {}, {:?})...", uid, cid, scopes);
 
-        //let conn: &SqliteConnection = &self.0.get().map_err(|e| InternalError::ConnectionError)?; TODO
-        let conn: &SqliteConnection = &self.0.get().unwrap();
+        let mut conn = get_connection(self)?;
 
         let mut values = Vec::new();
         for s in scopes {
@@ -239,7 +253,7 @@ impl UserDatabase for DbSqlBridge {
 
         let inserted = diesel::insert_into(granted_scopes)
             .values(&values)
-            .execute(conn)
+            .execute(&mut conn)
             .map_err(|_| InternalError::query_fail("error saving new oauth session"))?;
 
         debug!("saved {} granted-scopes to user {}: {:?}", inserted, uid, scopes);

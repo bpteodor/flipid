@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     granted_scopes (client_id, scope, user_id) {
         client_id -> Text,
         scope -> Text,
@@ -6,7 +8,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     oauth_clients (id) {
         id -> Text,
         secret -> Text,
@@ -16,14 +18,14 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     oauth_scopes (name) {
         name -> Text,
         description -> Nullable<Text>,
     }
 }
 
-table! {
+diesel::table! {
     oauth_sessions (auth_code) {
         auth_code -> Text,
         client_id -> Text,
@@ -35,7 +37,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     oauth_tokens (token) {
         token -> Text,
         token_type -> Text,
@@ -47,7 +49,7 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     users (id) {
         id -> Text,
         password -> Text,
@@ -62,11 +64,11 @@ table! {
     }
 }
 
-joinable!(granted_scopes -> oauth_clients (client_id));
-joinable!(granted_scopes -> oauth_scopes (scope));
-joinable!(oauth_tokens -> oauth_clients (client_id));
+diesel::joinable!(granted_scopes -> oauth_clients (client_id));
+diesel::joinable!(granted_scopes -> oauth_scopes (scope));
+diesel::joinable!(oauth_tokens -> oauth_clients (client_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     granted_scopes,
     oauth_clients,
     oauth_scopes,

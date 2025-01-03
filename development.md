@@ -28,7 +28,7 @@ Some random stuff usefull for development.
 - run locally: `docker run -ti -p 9000:9000   -v ${pwd}:/app   -e "RUN_BEHIND_PROXY=true" -w /app  my-flipid` or
 
 ```bash
-docker run -ti -p 9000:9000 --name flip-id \
+docker run --rm -ti -p 9000:9000 --name flip-id \
   -v $(pwd)/target/test.db:/app/target/test.db \
   -v $(pwd)/.env:/app/.env:ro \
   -v $(pwd)/config:/app/config:ro \

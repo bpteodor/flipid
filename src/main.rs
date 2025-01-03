@@ -35,8 +35,8 @@ mod oidc;
 
 use crate::core::AppState;
 use actix_files as fs;
-use actix_session::CookieSession;
-use actix_web::{middleware, web, App, HttpRequest, HttpServer, Result};
+use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use dotenv::dotenv;
@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
+            .app_data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
             .wrap(init_session())
@@ -116,24 +116,28 @@ fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
     builder
 }
 
-fn init_session() -> CookieSession {
+fn init_session() -> SessionMiddleware<CookieSessionStore> {
     let base_uri = config::base_uri();
 
-    //CookieSession::private(signed(&config::session_key())
-    CookieSession::signed(&config::session_key()) // for developlent
-        .domain(base_uri.host().expect("invalid issuer: no domain"))
-        .name("SID")
-        .path(base_uri.path())
-        .secure(true)
+    // validate: domain is set
+    base_uri.host().expect("invalid issuer: no domain");
+
+    SessionMiddleware::builder(CookieSessionStore::default(), Key::generate())
+        .cookie_name("SID".to_string())
+        .cookie_domain(base_uri.host().map(str::to_string))
+        .cookie_path(base_uri.path().to_string())
+        .cookie_http_only(true)
+        .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
+        .build()
 }
 
 fn init_cors() -> middleware::DefaultHeaders {
     middleware::DefaultHeaders::new() // CORS
-        .header("Access-Control-Allow-Origin", "https://fonts.gstatic.com")
-        .header("Access-Control-Allow-Methods", "GET")
-        .header("Access-Control-Allow-Headers", "Content-Type")
-        .header(
+        .add(("Access-Control-Allow-Origin", "https://fonts.gstatic.com"))
+        .add(("Access-Control-Allow-Methods", "GET"))
+        .add(("Access-Control-Allow-Headers", "Content-Type"))
+        .add((
             "Access-Control-Request-Headers",
             "X-Requested-With, accept, content-type",
-        )
+        ))
 }

@@ -7,7 +7,7 @@ use actix_web::{test, web, App};
 use mockall::predicate::*;
 
 #[test]
-fn init_tests() {
+async fn init_tests() {
     env_logger::init();
 }
 

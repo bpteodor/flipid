@@ -52,7 +52,7 @@ pub async fn token_endpoint(
                 .sample_iter(&Alphanumeric)
                 .take(30)
                 .map(char::from)
-                .collect();
+                .collect::<String>();
 
             let id_token = gen_id_token(&state, session, &access_token)?;
             core::json_ok(id_token)

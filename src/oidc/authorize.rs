@@ -24,7 +24,7 @@ fn handle_auth(data: &AuthParams, state: &Data<AppState>, session: &Session) -> 
     session.clear();
     match validate_auth(data, state)? {
         Some(e) => Ok(HttpResponse::Found()
-            .header(LOCATION, callback_error(data, e)?)
+            .append_header((LOCATION, callback_error(data, e)?))
             .finish()),
         None => {
             set_on_session(data, session)?;
@@ -117,14 +117,14 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
 }
 
 fn set_on_session(data: &AuthParams, session: &Session) -> Result<(), Error> {
-    session.set("client_id", &data.client_id)?;
-    session.set("scopes", &data.scope)?;
-    session.set("redirect_uri", &data.redirect_uri)?;
+    session.insert("client_id", &data.client_id)?;
+    session.insert("scopes", &data.scope)?;
+    session.insert("redirect_uri", &data.redirect_uri)?;
     if data.nonce.is_some() {
-        session.set("nonce", data.nonce.as_ref().unwrap())?;
+        session.insert("nonce", data.nonce.as_ref().unwrap())?;
     }
     if data.state.is_some() {
-        session.set("state", data.state.as_ref().unwrap())?;
+        session.insert("state", data.state.as_ref().unwrap())?;
     }
     Ok(())
 }

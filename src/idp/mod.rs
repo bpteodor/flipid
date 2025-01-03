@@ -34,8 +34,8 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     let pass = hex_digest(Hash::SHA256, &pass_bytes);
     let user = state.user_db.login(&form.username, &pass)?;
     info!("user {} authenticated", &form.username);
-    session.set("subject", &user.id)?;
-    session.set("auth_time", Utc::now().naive_utc().timestamp())?;
+    session.insert("subject", &user.id)?;
+    session.insert("auth_time", Utc::now().naive_utc().timestamp())?;
 
     let scopes: String = session
         .get::<String>("scopes")
@@ -87,7 +87,7 @@ fn generate_callback(
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
-        .collect();
+        .collect::<String>();
 
     let auth_code_exp = Utc::now()
         .naive_utc()
@@ -164,7 +164,7 @@ pub async fn cancel_login((state, session): (Data<AppState>, Session)) -> Result
 
     let callback_url: String =
         generate_callback_err(&session, &client.callback_url, "access_denied", "User denied access")?;
-    Ok(HttpResponse::Found().header(CONTENT_LOCATION, callback_url).finish())
+    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
 }
 
 fn generate_callback_err(
