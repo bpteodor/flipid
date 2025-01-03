@@ -1,6 +1,8 @@
 
-FROM debian:buster-slim
-LABEL maintainer="teos@bran.tech"
+#FROM alpine:3
+FROM ubuntu:24.04
+
+LABEL maintainer="bpteodor@gmail.com"
 
 ARG PROFILE=debug
 
@@ -10,11 +12,11 @@ RUN apt-get update && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY target/$PROFILE/flipid ./
+COPY target/${PROFILE}/flipid ./
 COPY static/ static/
 COPY templates templates/
 
 #USER 1000
 EXPOSE 9000
 
-CMD "./flipid"
+CMD [ "/app/flipid" ]
