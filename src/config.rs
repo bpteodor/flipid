@@ -15,6 +15,10 @@ pub fn port() -> String {
 pub fn is_protocol_https() -> bool {
     "https" == std::env::var("APP_PROTOCOL").unwrap_or("http".to_string())
 }
+pub fn is_secure_cookies() -> bool {
+    bool::from_str(&std::env::var("SECURE_COOKIES").unwrap_or_default()).unwrap_or(true)
+}
+
 pub fn server_cert() -> String {
     dotenv::var("SERVER_CERT").unwrap_or("config/cert.pem".into())
 }

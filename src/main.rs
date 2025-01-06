@@ -120,17 +120,21 @@ fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
 }
 
 fn init_session() -> SessionMiddleware<CookieSessionStore> {
+    let secret_key = Key::generate();
     let base_uri = config::base_uri();
+    //debug!("secure cookies: {}", config::is_secure_cookies());
 
     // validate: domain is set
     base_uri.host().expect("invalid issuer: no domain");
 
-    SessionMiddleware::builder(CookieSessionStore::default(), Key::generate())
+    SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
         .cookie_name("SID".to_string())
         .cookie_domain(base_uri.host().map(str::to_string))
         .cookie_path(base_uri.path().to_string())
         .cookie_http_only(true)
+        .cookie_secure(config::is_secure_cookies())
         .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
+        //.cookie_content_security(actix_session::config::CookieContentSecurity::Signed) // do not commit - INSECURE - for debug only
         .build()
 }
 
