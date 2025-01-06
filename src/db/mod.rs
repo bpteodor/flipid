@@ -199,7 +199,7 @@ impl UserDatabase for DbSqlBridge {
         }
 
         let item = items.pop().unwrap();
-        debug!("user({}) = {:?}", uid, &item);
+        trace!("user({}) = {:?}", uid, &item);
         Ok(item)
     }
 
