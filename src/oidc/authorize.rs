@@ -23,9 +23,10 @@ fn handle_auth(data: &AuthParams, state: &Data<AppState>, session: &Session) -> 
     info!("auth({:?})", data);
     session.clear();
     match validate_auth(data, state)? {
-        Some(e) => Ok(HttpResponse::Found()
-            .append_header((LOCATION, callback_error(data, e)?))
-            .finish()),
+        Some(e) => {
+            info!("Validation ERROR {:?}", &e);
+            Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
+        },
         None => {
             set_on_session(data, session)?;
             state.send_page(StatusCode::OK, "login.html", tera::Context::new())
@@ -117,6 +118,7 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
 }
 
 fn set_on_session(data: &AuthParams, session: &Session) -> Result<(), Error> {
+    debug!("creating auth-session for {:?}", &data.client_id);
     session.insert("client_id", &data.client_id)?;
     session.insert("scopes", &data.scope)?;
     session.insert("redirect_uri", &data.redirect_uri)?;

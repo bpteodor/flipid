@@ -4,12 +4,12 @@ Some random stuff usefull for development.
 
 ## Configuration
 
-- generate cert + key for the server
-`openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -nodes`
-- generate RSA keys for the RS256 alg
+- generate RSA keys for the JWT (RS256 alg)
   - `ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -f ./id_rsa`
   - `ssh-keygen -p -m PEM -f id_rsa`
   - `openssl rsa -in id_rsa -outform pem > id_rsa.pem`
+- (optional) generate cert + key for the server
+`openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -nodes`
 
 ## DB
 
@@ -20,11 +20,13 @@ Some random stuff usefull for development.
 ## Build
 
 - with cargo: `cargo build`
+  - build a release with `cargo build -r`
 - with docker: `docker run --rm -ti -v $(pwd):/work -v $HOME/.cargo/:/usr/local/cargo -w /work rust cargo build`
 
 ## build container & run
 
 - build container image: `docker build . -t my-flipid`
+  - build a release with: `docker build . -t my-flipid --build-arg PROFILE=release`
 - run locally: `docker run -ti -p 9000:9000   -v ${pwd}:/app   -e "RUN_BEHIND_PROXY=true" -w /app  my-flipid` or
 
 ```bash

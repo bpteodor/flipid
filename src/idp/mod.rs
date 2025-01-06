@@ -37,16 +37,11 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     session.insert("subject", &user.id)?;
     session.insert("auth_time", Utc::now().naive_utc().timestamp())?;
 
-    let scopes: String = session
-        .get::<String>("scopes")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .unwrap_or(String::new());
+    let scopes: String = session.get::<String>("scopes")?.ok_or(AppError::bad_req("invalid auth-session: no <scope>"))?;  //.unwrap_or(String::new());
     let requested_scopes: HashSet<&str> = scopes.split_whitespace().collect();
 
-    let client_id = session
-        .get::<String>("client_id")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .ok_or(AppError::bad_req("client_id is missing"))?;
+    let client_id = session.get::<String>("client_id")?.ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
+        
     let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &user.id)?;
     let mut new_scopes = Vec::new();
     for scope in requested_scopes {
@@ -124,15 +119,10 @@ fn generate_callback(
 pub async fn consent((scopes, state, session): (Json<Vec<String>>, Data<AppState>, Session)) -> Result<HttpResponse> {
     debug!("consented: [{:?}]", scopes);
 
-    let uid: String = session
-        .get::<String>("subject")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .ok_or(AppError::bad_req("user-id is missing"))?;
+    let uid: String = session.get::<String>("subject").map_err(|e| AppError::bad_req(format!("auth-session: {:?}", e)))?
+        .ok_or(AppError::bad_req("invalid auth-session: no <user-id>"))?;
     //.ok_or(AppError::Forbidden("user-id is missing".into()))?;
-    let client_id: String = session
-        .get::<String>("client_id")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .ok_or(AppError::bad_req("client_id is missing"))?;
+    let client_id: String = session.get::<String>("client_id")?.ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
 
     let mut granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &uid)?;
     if scopes.len() > 0 {

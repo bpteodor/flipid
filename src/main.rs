@@ -52,12 +52,12 @@ async fn main() -> std::io::Result<()> {
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(config::database_url());
-    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create pool.");
+    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), load_encryption_material())))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
             .wrap(init_session())
@@ -82,11 +82,13 @@ async fn main() -> std::io::Result<()> {
     });
 
     let addr = format!("0.0.0.0:{}", &config::port());
-    info!("SSL: {}", config::is_https_disabled());
+    info!("encrypted communication: {}", config::is_protocol_https());
 
-    if config::is_https_disabled() {
+    if (!config::is_protocol_https()) {
+        debug!("starting on port {}...", &config::port());
         srv.bind(addr)
     } else {
+        debug!("starting with SSL on port {}...", &config::port());
         let ssl = load_server_cert();
         srv.bind_openssl(addr, ssl)
     }
@@ -106,7 +108,8 @@ fn load_encryption_material() -> EncodingKey {
 
 fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
     info!("loading cert {}...", config::server_cert());
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
+        .expect(&("failed to load cert from ".to_string() + &config::server_cert()));
     builder
         .set_private_key_file(config::server_key(), SslFiletype::PEM)
         .expect("failed to load server-key");
@@ -117,21 +120,26 @@ fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
 }
 
 fn init_session() -> SessionMiddleware<CookieSessionStore> {
+    let secret_key = Key::generate();
     let base_uri = config::base_uri();
+    //debug!("secure cookies: {}", config::is_secure_cookies());
 
     // validate: domain is set
     base_uri.host().expect("invalid issuer: no domain");
 
-    SessionMiddleware::builder(CookieSessionStore::default(), Key::generate())
+    SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
         .cookie_name("SID".to_string())
         .cookie_domain(base_uri.host().map(str::to_string))
         .cookie_path(base_uri.path().to_string())
         .cookie_http_only(true)
+        .cookie_secure(config::is_secure_cookies())
         .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
+        //.cookie_content_security(actix_session::config::CookieContentSecurity::Signed) // do not commit - INSECURE - for debug only
         .build()
 }
 
 fn init_cors() -> middleware::DefaultHeaders {
+    // TODO: move to config
     middleware::DefaultHeaders::new() // CORS
         .add(("Access-Control-Allow-Origin", "https://fonts.gstatic.com"))
         .add(("Access-Control-Allow-Methods", "GET"))

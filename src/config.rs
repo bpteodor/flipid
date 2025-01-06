@@ -12,11 +12,15 @@ pub fn port() -> String {
     std::env::var("APP_PORT").unwrap_or("9000".into())
 }
 
-pub fn is_https_disabled() -> bool {
-    bool::from_str(&std::env::var("RUN_BEHIND_PROXY").unwrap_or_default()).unwrap_or(false)
+pub fn is_protocol_https() -> bool {
+    "https" == std::env::var("APP_PROTOCOL").unwrap_or("http".to_string())
 }
+pub fn is_secure_cookies() -> bool {
+    bool::from_str(&std::env::var("SECURE_COOKIES").unwrap_or_default()).unwrap_or(true)
+}
+
 pub fn server_cert() -> String {
-    std::env::var("SERVER_CERT").unwrap_or("config/cert.pem".into())
+    dotenv::var("SERVER_CERT").unwrap_or("config/cert.pem".into())
 }
 pub fn server_key() -> String {
     std::env::var("SERVER_KEY").unwrap_or("config/key.pem".into())

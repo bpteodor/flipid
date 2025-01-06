@@ -18,16 +18,16 @@
                 <v-layout align-center justify-center>
                     <v-flex xs12 sm10 md6 lg4>
 
+                        <v-alert v-model="alert" dismissable type="error" outlined>
+                            {{ alertMsg }}
+                        </v-alert>
+
                         <v-card class="elevation-2">
 
                             <v-toolbar dark color="primary">
                                 <v-toolbar-title>{{ currentTitle }}</v-toolbar-title>
                                 <v-spacer></v-spacer>
                             </v-toolbar>
-
-                            <v-alert v-model="alert" dismissable type="error" outlined>
-                                {{ alertMsg }}
-                            </v-alert>
 
                             <v-window v-model="step">
                                 <v-window-item :value="1">
@@ -155,7 +155,7 @@
                 } else if (e.response.status >= 500) { 
                     this.showAlert("Service not available. Please try again later.");
                 } else {
-                    this.showAlert(e.response.data.error);
+                    this.showAlert(e.response.data);
                 }
             },
             stopLoading: function () {
