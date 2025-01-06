@@ -15,6 +15,5 @@ Cargo.lock
 
 # editors
 /.idea/
-/.vscode/
 *.sublime-project
 *.sublime-workspace

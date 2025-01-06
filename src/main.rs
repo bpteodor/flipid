@@ -52,7 +52,7 @@ async fn main() -> std::io::Result<()> {
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(config::database_url());
-    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create pool.");
+    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
     let srv = HttpServer::new(move || {
@@ -82,11 +82,13 @@ async fn main() -> std::io::Result<()> {
     });
 
     let addr = format!("0.0.0.0:{}", &config::port());
-    info!("SSL: {}", config::is_https_disabled());
+    info!("encrypted communication: {}", config::is_protocol_https());
 
-    if config::is_https_disabled() {
+    if (!config::is_protocol_https()) {
+        debug!("starting on port {}...", &config::port());
         srv.bind(addr)
     } else {
+        debug!("starting with SSL on port {}...", &config::port());
         let ssl = load_server_cert();
         srv.bind_openssl(addr, ssl)
     }
@@ -106,7 +108,8 @@ fn load_encryption_material() -> EncodingKey {
 
 fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
     info!("loading cert {}...", config::server_cert());
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
+        .expect(&("failed to load cert from ".to_string() + &config::server_cert()));
     builder
         .set_private_key_file(config::server_key(), SslFiletype::PEM)
         .expect("failed to load server-key");
@@ -132,6 +135,7 @@ fn init_session() -> SessionMiddleware<CookieSessionStore> {
 }
 
 fn init_cors() -> middleware::DefaultHeaders {
+    // TODO: move to config
     middleware::DefaultHeaders::new() // CORS
         .add(("Access-Control-Allow-Origin", "https://fonts.gstatic.com"))
         .add(("Access-Control-Allow-Methods", "GET"))
