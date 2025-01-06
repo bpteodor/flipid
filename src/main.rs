@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(AppState::new(db.clone(), db.clone(), load_encryption_material()))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), load_encryption_material())))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
             .wrap(init_session())
@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
             .route("/op/token", web::post().to(oidc::token::token_endpoint))
             .route("/op/userinfo", web::get().to(oidc::userinfo::userinfo_endoint))
             .route("/op/userinfo", web::post().to(oidc::userinfo::userinfo_endoint))
-            .route("/op/jwks", web::get().to(oidc::jwks::get_keys))
+            .route("/op/jwks", web::get().to(oidc::jwks::get_keys1))
             // identity provider (should be customizable)
             .route("/idp/login", web::post().to(idp::login))
             .route("/idp/consent", web::post().to(idp::consent))
