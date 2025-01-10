@@ -1,4 +1,4 @@
-use super::super::db::schema::{oauth_sessions, oauth_tokens, oauth_clients, oauth_scopes, users};
+use super::super::db::schema::{oauth_clients, oauth_scopes, oauth_sessions, oauth_tokens, users};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -67,7 +67,7 @@ pub struct User {
     pub given_name: String,
     pub family_name: String,
     pub preferred_display_name: Option<String>, // if not provided should use "given_name family_name"
-    pub address : Option<String>, // free text
-    pub birthdate : Option<String>, // format: "YYYY-MM-DD"
-    pub locale : Option<String>, // format: "en-US"
+    pub address: Option<String>,                // free text
+    pub birthdate: Option<String>,              // format: "YYYY-MM-DD"
+    pub locale: Option<String>,                 // format: "en-US"
 }
