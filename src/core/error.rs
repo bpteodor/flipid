@@ -6,6 +6,8 @@ use failure::Fail;
 pub enum AppError {
     #[fail(display = "{}", msg)]
     ValidationError { msg: String },
+    #[fail(display = "{}", msg)]
+    InvalidAuthSession { msg: String },
     #[fail(display = "An internal error occurred. Please try again later.")]
     InternalError,
     #[fail(display = "Not Authorized")]
@@ -22,9 +24,9 @@ impl AppError {
             msg: String::from(m.as_ref()),
         }
     }
-    /*pub fn not_found(m: &str) -> Self {
-        AppError::NotFound  { item: String::from(m) }
-    }*/
+    pub fn bad_auth_session(m: &str) -> Self {
+        AppError::InvalidAuthSession { msg: String::from(m) }
+    }
 }
 
 impl ResponseError for AppError {
@@ -37,6 +39,7 @@ impl ResponseError for AppError {
     fn status_code(&self) -> StatusCode {
         match self {
             AppError::ValidationError { msg: _ } => StatusCode::BAD_REQUEST,
+            AppError::InvalidAuthSession { msg: _ } => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             //AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::NotFound => StatusCode::NOT_FOUND,
@@ -47,7 +50,7 @@ impl ResponseError for AppError {
 
 ///
 #[derive(Fail, Debug)]
-pub enum InternalError{
+pub enum InternalError {
     #[fail(display = "db connection error")]
     ConnectionError,
     #[fail(display = "query: {}", msg)]

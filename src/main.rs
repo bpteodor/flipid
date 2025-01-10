@@ -36,6 +36,7 @@ mod oidc;
 use crate::core::AppState;
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
+use actix_web::cookie::SameSite;
 use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
@@ -52,15 +53,22 @@ async fn main() -> std::io::Result<()> {
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(config::database_url());
-    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
+    let pool = r2d2::Pool::builder()
+        .build(manager)
+        .expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
+    let session_key = Key::generate();
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), load_encryption_material())))
+            .app_data(web::Data::new(AppState::new(
+                db.clone(),
+                db.clone(),
+                load_encryption_material(),
+            )))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
-            .wrap(init_session())
+            .wrap(init_session(session_key.clone()))
             // static resources
             .service(fs::Files::new("/s", ".").show_files_listing())
             .route("/favicon.ico", web::get().to(favicon))
@@ -84,7 +92,7 @@ async fn main() -> std::io::Result<()> {
     let addr = format!("0.0.0.0:{}", &config::port());
     info!("encrypted communication: {}", config::is_protocol_https());
 
-    if (!config::is_protocol_https()) {
+    if !config::is_protocol_https() {
         debug!("starting on port {}...", &config::port());
         srv.bind(addr)
     } else {
@@ -119,10 +127,9 @@ fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
     builder
 }
 
-fn init_session() -> SessionMiddleware<CookieSessionStore> {
-    let secret_key = Key::generate();
+fn init_session(secret_key: Key) -> SessionMiddleware<CookieSessionStore> {
     let base_uri = config::base_uri();
-    //debug!("secure cookies: {}", config::is_secure_cookies());
+    debug!("secure cookies: {}", config::is_secure_cookies());
 
     // validate: domain is set
     base_uri.host().expect("invalid issuer: no domain");
@@ -132,6 +139,7 @@ fn init_session() -> SessionMiddleware<CookieSessionStore> {
         .cookie_domain(base_uri.host().map(str::to_string))
         .cookie_path(base_uri.path().to_string())
         .cookie_http_only(true)
+        .cookie_same_site(SameSite::Strict)
         .cookie_secure(config::is_secure_cookies())
         .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
         //.cookie_content_security(actix_session::config::CookieContentSecurity::Signed) // do not commit - INSECURE - for debug only

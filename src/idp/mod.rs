@@ -34,14 +34,16 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     let pass = hex_digest(Hash::SHA256, &pass_bytes);
     let user = state.user_db.login(&form.username, &pass)?;
     info!("user {} authenticated", &form.username);
-    session.insert("subject", &user.id)?;
-    session.insert("auth_time", Utc::now().naive_utc().timestamp())?;
 
-    let scopes: String = session.get::<String>("scopes")?.ok_or(AppError::bad_req("invalid auth-session: no <scope>"))?;  //.unwrap_or(String::new());
+    let scopes: String = session
+        .get::<String>("scopes")?
+        .ok_or(AppError::bad_auth_session("no <scope>"))?; //.unwrap_or(String::new());
     let requested_scopes: HashSet<&str> = scopes.split_whitespace().collect();
 
-    let client_id = session.get::<String>("client_id")?.ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
-        
+    let client_id = session
+        .get::<String>("client_id")?
+        .ok_or(AppError::bad_auth_session("invalid auth-session: no <client_id>"))?;
+
     let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &user.id)?;
     let mut new_scopes = Vec::new();
     for scope in requested_scopes {
@@ -51,9 +53,14 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     }
     //let ss = requested_scopes.into_iter().filter(|s| !granted_scopes.contains(s)).collect();
 
+    session.insert("subject", &user.id)?;
+    session.insert("auth_time", Utc::now().naive_utc().timestamp())?;
+
     if new_scopes.len() == 0 {
         let callback_url = generate_callback(&session, &client_id, &state, scopes)?;
-        Ok(HttpResponse::Found().header(CONTENT_LOCATION, callback_url).finish())
+        Ok(HttpResponse::Found()
+            .append_header((CONTENT_LOCATION, callback_url))
+            .finish())
     } else {
         core::send_json(
             StatusCode::OK,
@@ -78,7 +85,7 @@ fn generate_callback(
         .fetch_client_config(client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
-    let auth_code : String = rand::thread_rng()
+    let auth_code: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
@@ -119,10 +126,14 @@ fn generate_callback(
 pub async fn consent((scopes, state, session): (Json<Vec<String>>, Data<AppState>, Session)) -> Result<HttpResponse> {
     debug!("consented: [{:?}]", scopes);
 
-    let uid: String = session.get::<String>("subject").map_err(|e| AppError::bad_req(format!("auth-session: {:?}", e)))?
+    let uid: String = session
+        .get::<String>("subject")
+        .map_err(|e| AppError::bad_req(format!("auth-session: {:?}", e)))?
         .ok_or(AppError::bad_req("invalid auth-session: no <user-id>"))?;
     //.ok_or(AppError::Forbidden("user-id is missing".into()))?;
-    let client_id: String = session.get::<String>("client_id")?.ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
+    let client_id: String = session
+        .get::<String>("client_id")?
+        .ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
 
     let mut granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &uid)?;
     if scopes.len() > 0 {
@@ -154,7 +165,9 @@ pub async fn cancel_login((state, session): (Data<AppState>, Session)) -> Result
 
     let callback_url: String =
         generate_callback_err(&session, &client.callback_url, "access_denied", "User denied access")?;
-    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
+    Ok(HttpResponse::Found()
+        .append_header((CONTENT_LOCATION, callback_url))
+        .finish())
 }
 
 fn generate_callback_err(

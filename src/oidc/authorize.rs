@@ -25,8 +25,10 @@ fn handle_auth(data: &AuthParams, state: &Data<AppState>, session: &Session) -> 
     match validate_auth(data, state)? {
         Some(e) => {
             info!("Validation ERROR {:?}", &e);
-            Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
-        },
+            Ok(HttpResponse::Found()
+                .append_header((LOCATION, callback_error(data, e)?))
+                .finish())
+        }
         None => {
             set_on_session(data, session)?;
             state.send_page(StatusCode::OK, "login.html", tera::Context::new())
