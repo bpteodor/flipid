@@ -10,8 +10,8 @@ use actix_web::web::{Data, Json};
 use actix_web::{HttpResponse, Result};
 use chrono::{naive::NaiveDateTime, offset::Utc, Duration};
 use crypto_hash::{hex_digest, Algorithm as Hash};
-use rand::distributions::Alphanumeric;
-use rand::Rng;
+use rand::distr::Alphanumeric;
+use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use url::Url;
 
@@ -85,7 +85,7 @@ fn generate_callback(
         .fetch_client_config(client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
-    let auth_code: String = rand::thread_rng()
+    let auth_code: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
