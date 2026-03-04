@@ -7,8 +7,8 @@ use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
 use chrono::{offset::Utc, Duration};
 use jwt::{encode, Algorithm, Header};
-use rand::distributions::Alphanumeric;
-use rand::Rng;
+use rand::distr::Alphanumeric;
+use rand::RngExt;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct TokenParams {
@@ -48,7 +48,7 @@ pub async fn token_endpoint(
             }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
-            let access_token: String = rand::thread_rng()
+            let access_token: String = rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(30)
                 .map(char::from)
