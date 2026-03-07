@@ -6,7 +6,7 @@ orbs:
 executors:
   rust-executor:
     docker:
-      - image: cimg/rust:1.83
+      - image: cimg/rust:1.94
     resource_class: medium
     environment:
       RUST_BACKTRACE: "1"
