@@ -50,13 +50,13 @@ jobs:
             - target/
 
       # Generate RSA keys for tests
-      - run:
-          name: Generate test RSA keys
-          command: |
-            mkdir -p tests/resources/config
-            ssh-keygen -t rsa -b 4096 -N "" -C "test@example.com" -f ./tests/resources/config/id_rsa
-            ssh-keygen -p -m PEM -N "" -P "" -f tests/resources/config/id_rsa
-            openssl rsa -in tests/resources/config/id_rsa -outform pem > tests/resources/config/id_rsa.pem
+      #- run:
+      #    name: Generate test RSA keys
+      #    command: |
+      #      mkdir -p tests/resources/config
+      #      ssh-keygen -t rsa -b 4096 -N "" -C "test@example.com" -f ./tests/resources/config/id_rsa
+      #      ssh-keygen -p -m PEM -N "" -P "" -f tests/resources/config/id_rsa
+      #      openssl rsa -in tests/resources/config/id_rsa -outform pem > tests/resources/config/id_rsa.pem
 
       # Run database migrations
       - run:
