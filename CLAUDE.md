@@ -38,8 +38,14 @@ cargo build
 # Build release
 cargo build -r
 
-# Run tests
+# Run all tests
 cargo test
+
+# Run a single test by name
+cargo test test_token_happy_path
+
+# Run all tests in a module
+cargo test oidc::test_token
 ```
 
 ### Docker
@@ -64,50 +70,31 @@ docker run --rm -ti -p 9000:9000 --name flip-id \
 
 ### Module Structure
 
-The codebase follows a clean separation of concerns:
-
-- **`main.rs`**: Application entry point, sets up actix-web HTTP server with routing, session middleware, CORS, and optional SSL support
-- **`config.rs`**: Configuration management via environment variables (`.env` file)
-- **`core/`**: Core abstractions and business logic
-  - `models.rs`: Data models (OauthClient, OauthSession, OauthToken, User)
-  - `error.rs`: Error types (AppError, InternalError)
-  - Defines `OauthDatabase` and `UserDatabase` traits for persistence layer abstraction
-  - `AppState`: Application state containing Tera templates, database connections, and RSA keys
-- **`db/`**: Database layer implementation
-  - `schema.rs`: Diesel schema definitions
-  - `mod.rs`: `DbSqlBridge` implements `OauthDatabase` and `UserDatabase` traits using SQLite via Diesel ORM
-- **`oidc/`**: OpenID Connect protocol endpoints
-  - `discovery.rs`: `.well-known/openid-configuration` endpoint
-  - `authorize.rs`: Authorization endpoint (OAuth2 authorization code flow)
-  - `token.rs`: Token endpoint (exchanges authorization code for tokens)
-  - `userinfo.rs`: UserInfo endpoint (returns user claims)
-  - `jwks.rs`: JSON Web Key Set endpoint (public keys for token verification)
-- **`idp/`**: Identity Provider UI and user authentication
-  - Login, consent, and cancellation handlers
-  - Session management and scope consent tracking
+- **`main.rs`**: Application entry point — sets up actix-web routing, session middleware, CORS, and optional SSL. Also hosts `load_encryption_material()` and `load_server_cert()` helpers used in tests.
+- **`config.rs`**: Thin wrappers over `std::env::var` — no caching, read on every call.
+- **`core/`**: Shared abstractions. Defines `OauthDatabase` and `UserDatabase` traits (annotated with `#[cfg_attr(test, automock)]` for mockall), `AppState`, and error types.
+- **`db/`**: `DbSqlBridge` is the only concrete implementation of both database traits, backed by SQLite via Diesel ORM.
+- **`oidc/`**: OIDC protocol endpoints under `/op/`. Each file is one endpoint.
+- **`idp/`**: Non-protocol IDP UI handlers under `/idp/` — login, consent, and cancel. Manages the actix session (cookie) between the authorize redirect and the code issuance.
 
 ### Key Design Patterns
 
-1. **Trait-Based Persistence**: `OauthDatabase` and `UserDatabase` traits abstract data access, making the system pluggable for different backends (currently SQLite, but designed for LDAP, Redis, etc.)
+1. **Trait-Based Persistence**: `OauthDatabase` and `UserDatabase` in `core/mod.rs` abstract all DB access. Tests mock these traits with `mockall`; no real DB is needed for unit tests.
 
-2. **Actix-Web Framework**: Uses actix-web for async HTTP handling with:
-   - Session middleware with encrypted cookies
-   - Request routing to OIDC endpoints
-   - Static file serving for UI assets
+2. **Error Handling**: `InternalError` is used internally by DB/service code. It is converted to `AppError` via `InternalError::to_user()` before returning from handlers. `AppError` implements `ResponseError` for actix-web.
 
-3. **JWT Token Flow**:
-   - RS256 algorithm (RSA signature)
-   - Private key loaded from PEM file configured via `OAUTH_JWT_RSA_PEM`
-   - Public keys exposed via `/op/jwks` endpoint
+3. **Session Flow**:
+   - `GET /op/authorize` stores params (client_id, scopes, nonce, redirect_uri, state) in the encrypted cookie session and renders the login page.
+   - `POST /idp/login` authenticates the user, writes `subject`/`auth_time` to session. If all scopes already granted, immediately issues the auth code; otherwise returns scopes needing consent.
+   - `POST /idp/consent` saves newly granted scopes and issues the auth code.
+   - `POST /op/token` consumes the auth code (one-time use), validates expiry + redirect_uri + Basic auth credentials, issues a JWT id_token (RS256) and a random opaque access_token.
 
-4. **Session Flow**:
-   - Authorization requests create sessions with scopes, nonce, redirect_uri
-   - User authenticates via `/idp/login`
-   - User grants consent via `/idp/consent` (tracks granted scopes per user/client)
-   - Authorization code issued and stored in `oauth_sessions` table
-   - Code exchanged for tokens at `/op/token` (code consumed after use)
+4. **JWT Token Flow**:
+   - RS256 — private key path configured via `OAUTH_JWT_RSA_PEM`.
+   - `AppState.rsa` holds the loaded `EncodingKey`.
+   - Public keys exposed via `GET /op/jwks`.
 
-5. **Password Security**: User passwords are SHA256 hashed (see [idp/mod.rs:34](src/idp/mod.rs#L34))
+5. **Password Security**: Passwords are SHA256-hashed before DB lookup ([src/idp/mod.rs:34](src/idp/mod.rs#L34)).
 
 ### Configuration
 
@@ -125,24 +112,14 @@ All configuration via environment variables (`.env` file):
 
 ### Testing
 
-- Unit tests use `mockall` crate for mocking database traits
-- Test module: [src/oidc/test_authorize.rs](src/oidc/test_authorize.rs)
-- Run with `cargo test`
-
-## Known TODOs
-
-From [TODO.md](TODO.md):
-- Finish persistency separation: switchable library for different DBs (LDAP, SQLite, Redis)
-- Support more OIDC/auth flows (implicit, client credentials, ROPC)
-- Refresh token support
-- Introspection endpoint
-- SSO + logout
-- Dynamic client registration
-- More regression tests (at least 1 happy path test per endpoint)
+- Tests use `mockall`-generated mocks for `OauthDatabase` and `UserDatabase`.
+- Test env config: `tests/resources/.env` (points to `tests/resources/config/id_rsa.pem` for the RSA key).
+- Test files: [src/oidc/test_authorize.rs](src/oidc/test_authorize.rs), [src/oidc/test_token.rs](src/oidc/test_token.rs).
+- `load_encryption_material()` (defined in `main.rs`) is called from tests to build `AppState`.
 
 ## Important Notes
 
-- Database migrations are managed by Diesel (see `migrations/` directory)
-- Templates use Tera templating engine (see `templates/` directory)
-- Static resources served from `static/` directory
-- The cookie session uses the domain and path from `OAUTH_ISSUER` config
+- Database migrations are managed by Diesel (see `migrations/` directory).
+- Templates use Tera templating engine (see `templates/` directory).
+- The cookie session uses the domain and path extracted from `OAUTH_ISSUER`.
+- `token_endpoint` panics if the `Authorization` header is missing (line 43 of `token.rs`) — this is a known bug.
