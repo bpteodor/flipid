@@ -35,8 +35,7 @@ pub async fn token_endpoint(
                 .fetch_client_config(&session.client_id)
                 .map_err(|_| AppError::bad_req("failed to load the client config"))?;
 
-            let callback_urls = client.callback_urls().map_err(|_| AppError::InternalError)?;
-            if !callback_urls.contains(&data.redirect_uri) {
+            if !client.callback_url.contains(&data.redirect_uri) {
                 return Err(AppError::bad_req("redirect_uri mismatch"))?;
             }
 

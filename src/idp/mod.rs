@@ -163,8 +163,9 @@ pub async fn cancel_login((state, session): (Data<AppState>, Session)) -> Result
         .fetch_client_config(&client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config"))?;
 
+    let first_url = client.callback_url.first().ok_or(AppError::InternalError)?;
     let callback_url: String =
-        generate_callback_err(&session, &client.callback_url, "access_denied", "User denied access")?;
+        generate_callback_err(&session, first_url, "access_denied", "User denied access")?;
     Ok(HttpResponse::Found()
         .append_header((CONTENT_LOCATION, callback_url))
         .finish())

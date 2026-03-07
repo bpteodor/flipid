@@ -55,7 +55,7 @@ fn test_client1() -> OauthClient {
         id: "test1".into(),
         secret: "test1".into(),
         name: "Test1".into(),
-        callback_url: "[\"http://localhost:8080/callback\"]".into(),
+        callback_url: vec!["http://localhost:8080/callback".into()],
         allowed_scopes: "openid profile email phone address".into(),
     }
 }

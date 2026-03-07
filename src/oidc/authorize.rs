@@ -88,8 +88,7 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
         .fetch_client_config(&client_id)
         .map_err(|_| AppError::bad_req("Unknown or invalid client_id "))?;
 
-    let callback_urls = client.callback_urls().map_err(|_| AppError::InternalError)?;
-    if !callback_urls.contains(&redirect_uri) {
+    if !client.callback_url.contains(redirect_uri) {
         return Err(AppError::bad_req("'redirect_uri' is invaliid"));
     }
 
