@@ -93,7 +93,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     .map_err(|e| InternalError("JWT encoding".into(), Box::new(e)))?;
     */
     let header = Header::new(Algorithm::RS256);
-    let id_token = encode(&header, &claims, &state.rsa).map_err(|_| InternalError)?;
+    let id_token = encode(&header, &claims, &state.rsa_key).map_err(|_| InternalError)?;
 
     state
         .oauth_db

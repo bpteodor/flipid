@@ -8,7 +8,7 @@ pub struct AppState {
     pub template: tera::Tera,
     pub oauth_db: Box<dyn OauthDatabase>,
     pub user_db: Box<dyn UserDatabase>,
-    pub rsa: jwt::EncodingKey,
+    pub rsa_key: jwt::EncodingKey,
 }
 
 impl AppState {
@@ -17,7 +17,7 @@ impl AppState {
             template: tera::Tera::new("templates/**/*.html").expect("failed to initialize tera templating"),
             oauth_db,
             user_db,
-            rsa,
+            rsa_key: rsa,
         }
     }
 
