@@ -9,6 +9,8 @@ pub mod userinfo;
 mod test_authorize;
 #[cfg(test)]
 mod test_token;
+#[cfg(test)]
+mod test_userinfo;
 
 /**
  * OAuth 2.0 Authorization Error Response
