@@ -136,18 +136,16 @@ jobs:
       - checkout
       - setup_remote_docker:
           docker_layer_caching: true
-      - docker/check:
-          docker-username: DOCKER_USER
-          docker-password: DOCKER_PASSWORD
+      - docker/check
+          #registry: $REGISTRY
       - docker/build:
-          image: ${DOCKER_USER}/flipid
+          image: ${DOCKER_USER}/$CIRCLE_PROJECT_REPONAME
           tag: ${CIRCLE_SHA1},latest
       - docker/push:
-          image: ${DOCKER_USER}/flipid
+          image: ${DOCKER_USER}/$CIRCLE_PROJECT_REPONAME
           tag: ${CIRCLE_SHA1},latest
 
 workflows:
-  version: 2
   build-test-deploy:
     jobs:
       - test
