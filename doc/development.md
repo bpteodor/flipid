@@ -4,14 +4,18 @@ Some random stuff usefull for development.
 
 ## Configuration
 
-- generate RSA keys for the JWT (RS256 alg)
-  - `ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -f ./id_rsa`
-  - `ssh-keygen -p -m PEM -f id_rsa`
-  - `openssl rsa -in id_rsa -outform pem > id_rsa.pem`
-- (optional) generate cert + key for the server
-`openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -nodes`
+### 1. Cryptografic material
+```sh
+# generate RSA keys for the JWT (RS256 alg)
+cd config
+ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -f ./id_rsa
+ssh-keygen -p -m PEM -f id_rsa
+openssl rsa -in id_rsa -outform pem > id_rsa.pem
+# (optional) generate cert + key for the server
+openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.cert -nodes
+```
 
-## DB
+### DB
 
 - install dependencies: `sudo apt install libsqlite3-dev`
 - install diesel cli: `cargo install diesel_cli --no-default-features --features sqlite`

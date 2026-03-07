@@ -1,0 +1,164 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@3.0.1
+
+executors:
+  rust-executor:
+    docker:
+      - image: cimg/rust:1.94
+    resource_class: medium
+    environment:
+      RUST_BACKTRACE: "1"
+      CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    executor: rust-executor
+    steps:
+      - checkout
+
+      # Install system dependencies
+      - run:
+          name: Install system dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libssl-dev libsqlite3-dev
+
+      # Restore cargo cache
+      - restore_cache:
+          keys:
+            - cargo-cache-v1-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-cache-v1-{{ arch }}-
+
+      # Install diesel_cli
+      - run:
+          name: Install diesel_cli
+          command: |
+            if ! command -v diesel &> /dev/null; then
+              cargo install diesel_cli --no-default-features --features sqlite
+            fi
+
+      # Save cargo cache
+      - save_cache:
+          key: cargo-cache-v1-{{ arch }}-{{ checksum "Cargo.lock" }}
+          paths:
+            - ~/.cargo/bin/
+            - ~/.cargo/registry/index/
+            - ~/.cargo/registry/cache/
+            - ~/.cargo/git/db/
+            - target/
+
+      # Generate RSA keys for tests
+      - run:
+          name: Generate test RSA keys
+          command: |
+            mkdir -p tests/resources/config
+            ssh-keygen -t rsa -b 4096 -N "" -C "test@example.com" -f ./tests/resources/config/id_rsa
+            ssh-keygen -p -m PEM -N "" -P "" -f tests/resources/config/id_rsa
+            openssl rsa -in tests/resources/config/id_rsa -outform pem > tests/resources/config/id_rsa.pem
+
+      # Run database migrations
+      - run:
+          name: Run database migrations
+          command: |
+            export DATABASE_URL="tests/resources/test.db"
+            diesel migration run
+
+      # Run cargo check
+      - run:
+          name: Run cargo check
+          command: cargo check --all-targets --all-features
+
+      # Run cargo fmt check
+      - run:
+          name: Check formatting
+          command: cargo fmt --all -- --check
+
+      # Run cargo clippy
+      - run:
+          name: Run clippy
+          command: cargo clippy --all-targets --all-features -- -D warnings
+
+      # Run unit tests
+      - run:
+          name: Run unit tests
+          command: cargo test --lib --features testing
+
+      # Run integration tests
+      - run:
+          name: Run integration tests
+          command: cargo test --features testing --test '*'
+
+      # Store test results
+      - store_test_results:
+          path: target/test-results
+
+  build:
+    executor: rust-executor
+    steps:
+      - checkout
+
+      # Install system dependencies
+      - run:
+          name: Install system dependencies
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y libssl-dev libsqlite3-dev
+
+      # Restore cargo cache
+      - restore_cache:
+          keys:
+            - cargo-cache-v1-{{ arch }}-{{ checksum "Cargo.lock" }}
+            - cargo-cache-v1-{{ arch }}-
+
+      # Build release binary
+      - run:
+          name: Build release binary
+          command: cargo build --release
+
+      # Save artifacts
+      - store_artifacts:
+          path: target/release/flipid
+          destination: flipid
+
+      # Persist workspace for docker build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - target/release/flipid
+            - Dockerfile
+            - .dockerignore
+
+  docker-build:
+    executor: docker/docker
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - docker/check
+          #registry: $REGISTRY
+      - docker/build:
+          image: ${DOCKER_USER}/$CIRCLE_PROJECT_REPONAME
+          tag: ${CIRCLE_SHA1},latest
+      - docker/push:
+          image: ${DOCKER_USER}/$CIRCLE_PROJECT_REPONAME
+          tag: ${CIRCLE_SHA1},latest
+
+workflows:
+  build-test-deploy:
+    jobs:
+      - test
+      - build:
+          requires:
+            - test
+      - docker-build:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
+                - main
+          # Uncomment to enable manual approval before docker build
+          # type: approval
