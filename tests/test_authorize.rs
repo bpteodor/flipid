@@ -1,15 +1,9 @@
-use super::*;
-use crate::core::models::OauthClient;
-use crate::*;
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::models::OauthClient;
+use flipid::oidc::authorize;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
-#[cfg(test)]
 use mockall::predicate::*;
-
-#[test]
-async fn init_tests() {
-    env_logger::init();
-}
 
 #[actix_rt::test]
 async fn test_authorize_get_goto_login() {
@@ -31,7 +25,6 @@ async fn test_authorize_get_goto_login() {
     let req = test::TestRequest::get()
         .uri("/authorize?response_type=code&client_id=test1&scope=openid&redirect_uri=http://localhost:8080/callback")
         .to_request();
-    info!("{:?}", req);
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(resp.status(), StatusCode::OK); // login page
 }

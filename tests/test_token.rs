@@ -1,9 +1,8 @@
-use super::token::*;
-use crate::core::models::{OauthClient, OauthSession};
-use crate::*;
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::models::{OauthClient, OauthSession};
+use flipid::oidc::token::token_endpoint;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
-#[cfg(test)]
 use mockall::predicate::*;
 
 fn test_client() -> OauthClient {

@@ -1,39 +1,6 @@
-//#![allow(unused_variables)]
-//#![allow(unused_imports)]
-//#![allow(warnings)] //because of diesel (polluting the world, digital or analog)
+use flipid::core::{load_encryption_material, AppState};
+use flipid::{config, db, idp, oidc};
 
-extern crate actix_http;
-extern crate actix_session;
-extern crate actix_web;
-extern crate futures;
-extern crate tera;
-extern crate url;
-#[macro_use]
-extern crate serde_derive;
-extern crate env_logger;
-extern crate serde;
-extern crate serde_json;
-extern crate serde_urlencoded;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate diesel;
-extern crate base64;
-extern crate chrono;
-extern crate crypto_hash;
-extern crate dotenv;
-extern crate jsonwebtoken as jwt;
-extern crate openssl;
-extern crate r2d2;
-extern crate rand;
-
-mod config;
-mod core;
-mod db;
-mod idp;
-mod oidc;
-
-use crate::core::AppState;
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
 use actix_web::cookie::SameSite;
@@ -41,7 +8,6 @@ use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Resu
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use dotenv::dotenv;
-use jwt::EncodingKey;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
@@ -90,13 +56,13 @@ async fn main() -> std::io::Result<()> {
     });
 
     let addr = format!("0.0.0.0:{}", &config::port());
-    info!("encrypted communication: {}", config::is_protocol_https());
+    log::info!("encrypted communication: {}", config::is_protocol_https());
 
     if !config::is_protocol_https() {
-        debug!("starting on port {}...", &config::port());
+        log::debug!("starting on port {}...", &config::port());
         srv.bind(addr)
     } else {
-        debug!("starting with SSL on port {}...", &config::port());
+        log::debug!("starting with SSL on port {}...", &config::port());
         let ssl = load_server_cert();
         srv.bind_openssl(addr, ssl)
     }
@@ -109,13 +75,8 @@ async fn favicon(_req: HttpRequest) -> Result<fs::NamedFile> {
     Ok(fs::NamedFile::open("static/favicon.ico")?)
 }
 
-fn load_encryption_material() -> EncodingKey {
-    let pem: Vec<u8> = core::load_file(&config::oauth_rsa_pem()).expect("failed to read certificates");
-    EncodingKey::from_rsa_pem(&pem).expect("failed to load key")
-}
-
 fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
-    info!("loading cert {}...", config::server_cert());
+    log::info!("loading cert {}...", config::server_cert());
     let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
         .expect(&("failed to load cert from ".to_string() + &config::server_cert()));
     builder
@@ -129,7 +90,7 @@ fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
 
 fn init_session(secret_key: Key) -> SessionMiddleware<CookieSessionStore> {
     let base_uri = config::base_uri();
-    debug!("secure cookies: {}", config::is_secure_cookies());
+    log::debug!("secure cookies: {}", config::is_secure_cookies());
 
     // validate: domain is set
     base_uri.host().expect("invalid issuer: no domain");

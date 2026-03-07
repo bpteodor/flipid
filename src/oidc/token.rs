@@ -121,7 +121,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
 /// calculates the expected value for the "Authentication" header
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// assert_eq!(calc_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
 /// ```
 fn calc_auth(user: &str, pass: &str) -> String {

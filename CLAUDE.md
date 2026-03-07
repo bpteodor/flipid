@@ -38,14 +38,14 @@ cargo build
 # Build release
 cargo build -r
 
-# Run all tests
-cargo test
+# Run all tests (integration tests require --features testing)
+cargo test --features testing
 
 # Run a single test by name
-cargo test test_token_happy_path
+cargo test --features testing test_token_happy_path
 
-# Run all tests in a module
-cargo test oidc::test_token
+# Run only integration tests
+cargo test --features testing --test test_token
 ```
 
 ### Docker

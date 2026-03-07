@@ -1,9 +1,8 @@
-use super::userinfo::*;
-use crate::core::models::{OauthToken, User};
-use crate::*;
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::models::{OauthToken, User};
+use flipid::oidc::userinfo::userinfo_endoint;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
-#[cfg(test)]
 use mockall::predicate::*;
 
 const ACCESS_TOKEN: &str = "test-access-token-abc";

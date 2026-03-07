@@ -42,6 +42,13 @@ failure = "0.1"
 log = "0.4"
 env_logger = "0.11"
 
+mockall = { version = "0.14", optional = true }
+
+[features]
+# Enables mock types for use in integration tests (tests/ directory).
+# Run: cargo test --features testing
+testing = ["dep:mockall"]
+
 # standard crate data is left out
 [dev-dependencies]
 mockall = "0.14"
