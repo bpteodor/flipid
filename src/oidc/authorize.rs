@@ -89,7 +89,7 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
         .map_err(|_| AppError::bad_req("Unknown or invalid client_id "))?;
 
     if !client.callback_url.contains(redirect_uri) {
-        return Err(AppError::bad_req("'redirect_uri' is invaliid"));
+        return Err(AppError::bad_req("'redirect_uri' is invalid"));
     }
 
     if data.scope.is_some() {

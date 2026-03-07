@@ -184,7 +184,7 @@ fn generate_callback_err(
     // add the code to the callback URL and return it
     let mut params: HashMap<&str, &str> = HashMap::new();
     params.insert("error", error);
-    params.insert("error_desciption", description);
+    params.insert("error_description", description);
     if state.is_some() {
         params.insert("state", state.as_ref().unwrap());
     }
