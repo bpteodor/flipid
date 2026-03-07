@@ -20,9 +20,7 @@ pub struct TokenParams {
 /// POST /token
 ///
 /// [Specifications](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint)
-pub async fn token_endpoint(
-    (data, state, req): (Form<TokenParams>, Data<AppState>, HttpRequest),
-) -> Result<HttpResponse> {
+pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     debug!("form: [{:?}]", data);
     match data.grant_type.to_lowercase().as_ref() {
         "authorization_code" => {
@@ -47,11 +45,7 @@ pub async fn token_endpoint(
             }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
-            let access_token: String = rand::rng()
-                .sample_iter(&Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect::<String>();
+            let access_token: String = rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect::<String>();
 
             let id_token = gen_id_token(&state, session, &access_token)?;
             core::json_ok(id_token)
@@ -73,10 +67,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
         sub: &session.subject,
         aud: &session.client_id,
         nonce: session.nonce.as_ref(),
-        exp: now
-            .checked_add_signed(Duration::seconds(exp))
-            .unwrap_or(now)
-            .timestamp(),
+        exp: now.checked_add_signed(Duration::seconds(exp)).unwrap_or(now).timestamp(),
         iat: now.timestamp(),
         auth_time: session.auth_time.map(|d| d.timestamp()),
     };

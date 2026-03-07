@@ -35,9 +35,7 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     let user = state.user_db.login(&form.username, &pass)?;
     info!("user {} authenticated", &form.username);
 
-    let scopes: String = session
-        .get::<String>("scopes")?
-        .ok_or(AppError::bad_auth_session("no <scope>"))?; //.unwrap_or(String::new());
+    let scopes: String = session.get::<String>("scopes")?.ok_or(AppError::bad_auth_session("no <scope>"))?; //.unwrap_or(String::new());
     let requested_scopes: HashSet<&str> = scopes.split_whitespace().collect();
 
     let client_id = session
@@ -58,9 +56,7 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
 
     if new_scopes.len() == 0 {
         let callback_url = generate_callback(&session, &client_id, &state, scopes)?;
-        Ok(HttpResponse::Found()
-            .append_header((CONTENT_LOCATION, callback_url))
-            .finish())
+        Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
     } else {
         core::send_json(
             StatusCode::OK,
@@ -72,12 +68,7 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     }
 }
 
-fn generate_callback(
-    session: &Session,
-    client_id: &str,
-    state: &AppState,
-    scopes: String,
-) -> Result<String, InternalError> {
+fn generate_callback(session: &Session, client_id: &str, state: &AppState, scopes: String) -> Result<String, InternalError> {
     debug!("generating success callback_uri");
 
     let client = state
@@ -85,20 +76,13 @@ fn generate_callback(
         .fetch_client_config(client_id)
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
-    let auth_code: String = rand::rng()
-        .sample_iter(&Alphanumeric)
-        .take(10)
-        .map(char::from)
-        .collect::<String>();
+    let auth_code: String = rand::rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect::<String>();
 
     let auth_code_exp = Utc::now()
         .naive_utc()
         .checked_add_signed(Duration::minutes(config::oidc_auth_code_exp()))
         .unwrap();
-    let auth_time = session
-        .get::<i64>("auth_time")
-        .unwrap()
-        .map(|x| NaiveDateTime::from_timestamp(x, 0));
+    let auth_time = session.get::<i64>("auth_time").unwrap().map(|x| NaiveDateTime::from_timestamp(x, 0));
 
     // save the code into db
     state.oauth_db.save_oauth_session(OauthSession {
@@ -164,19 +148,11 @@ pub async fn cancel_login((state, session): (Data<AppState>, Session)) -> Result
         .map_err(|_| InternalError::query_fail("failed to load the client config"))?;
 
     let first_url = client.callback_url.first().ok_or(AppError::InternalError)?;
-    let callback_url: String =
-        generate_callback_err(&session, first_url, "access_denied", "User denied access")?;
-    Ok(HttpResponse::Found()
-        .append_header((CONTENT_LOCATION, callback_url))
-        .finish())
+    let callback_url: String = generate_callback_err(&session, first_url, "access_denied", "User denied access")?;
+    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
 }
 
-fn generate_callback_err(
-    session: &Session,
-    redirect_uri: &str,
-    error: &str,
-    description: &str,
-) -> Result<String, AppError> {
+fn generate_callback_err(session: &Session, redirect_uri: &str, error: &str, description: &str) -> Result<String, AppError> {
     debug!("generating error callback_uri: [{}] {}", error, description);
 
     let state: Option<String> = session.get("state").unwrap_or(Option::None);

@@ -19,19 +19,13 @@ async fn main() -> std::io::Result<()> {
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(config::database_url());
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create connection pool.");
+    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
     let session_key = Key::generate();
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(
-                db.clone(),
-                db.clone(),
-                load_encryption_material(),
-            )))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), load_encryption_material())))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors())
             .wrap(init_session(session_key.clone()))
@@ -39,10 +33,7 @@ async fn main() -> std::io::Result<()> {
             .service(fs::Files::new("/s", ".").show_files_listing())
             .route("/favicon.ico", web::get().to(favicon))
             // openid provider
-            .route(
-                "/.well-known/openid-configuration",
-                web::get().to(oidc::discovery::openid_config),
-            )
+            .route("/.well-known/openid-configuration", web::get().to(oidc::discovery::openid_config))
             .route("/op/authorize", web::get().to(oidc::authorize::auth_get))
             .route("/op/authorize", web::post().to(oidc::authorize::auth_post))
             .route("/op/token", web::post().to(oidc::token::token_endpoint))
@@ -77,8 +68,7 @@ async fn favicon(_req: HttpRequest) -> Result<fs::NamedFile> {
 
 fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
     log::info!("loading cert {}...", config::server_cert());
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
-        .expect(&("failed to load cert from ".to_string() + &config::server_cert()));
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).expect(&("failed to load cert from ".to_string() + &config::server_cert()));
     builder
         .set_private_key_file(config::server_key(), SslFiletype::PEM)
         .expect("failed to load server-key");
@@ -113,8 +103,5 @@ fn init_cors() -> middleware::DefaultHeaders {
         .add(("Access-Control-Allow-Origin", "https://fonts.gstatic.com"))
         .add(("Access-Control-Allow-Methods", "GET"))
         .add(("Access-Control-Allow-Headers", "Content-Type"))
-        .add((
-            "Access-Control-Request-Headers",
-            "X-Requested-With, accept, content-type",
-        ))
+        .add(("Access-Control-Request-Headers", "X-Requested-With, accept, content-type"))
 }

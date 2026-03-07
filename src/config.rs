@@ -32,23 +32,15 @@ pub fn database_url() -> String {
 
 /// key used for signing / encrypting the session cookie
 pub fn session_key() -> Vec<u8> {
-    std::env::var("SESSION_KEY")
-        .expect("SESSION_KEY must be set")
-        .into_bytes()
+    std::env::var("SESSION_KEY").expect("SESSION_KEY must be set").into_bytes()
 }
 
 /*pub fn oauth_jwt_secret() -> String {std::env::var("OAUTH_JWT_SECRET").expect("OAUTH_JWT_SECRET must be set")}*/
 pub fn oidc_auth_code_exp() -> i64 {
-    std::env::var("OIDC_AUTH_CODE_EXP")
-        .unwrap_or("60".into())
-        .parse::<i64>()
-        .unwrap()
+    std::env::var("OIDC_AUTH_CODE_EXP").unwrap_or("60".into()).parse::<i64>().unwrap()
 }
 pub fn oauth_token_exp() -> i64 {
-    std::env::var("OAUTH_TOKEN_EXP")
-        .unwrap_or("3600".into())
-        .parse::<i64>()
-        .unwrap()
+    std::env::var("OAUTH_TOKEN_EXP").unwrap_or("3600".into()).parse::<i64>().unwrap()
 }
 pub fn oauth_rsa_pem() -> String {
     std::env::var("OAUTH_JWT_RSA_PEM").expect("OAUTH_JWT_RSA_PEM must be set")

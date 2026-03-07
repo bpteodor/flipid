@@ -1,8 +1,8 @@
-use flipid::core::{self, load_encryption_material, AppState};
-use flipid::core::models::{OauthClient, OauthSession};
-use flipid::oidc::token::token_endpoint;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
+use flipid::core::models::{OauthClient, OauthSession};
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::oidc::token::token_endpoint;
 use mockall::predicate::*;
 
 fn test_client() -> OauthClient {
@@ -68,10 +68,7 @@ async fn test_token_happy_path() {
         .times(1)
         .returning(|_| Ok(test_client()));
 
-    oauth_db
-        .expect_save_oauth_token()
-        .times(1)
-        .returning(|_| Ok(()));
+    oauth_db.expect_save_oauth_token().times(1).returning(|_| Ok(()));
 
     let mut app = test::init_service(
         App::new()
@@ -210,12 +207,7 @@ async fn test_token_invalid_credentials() {
 #[actix_rt::test]
 async fn test_token_unsupported_grant_type() {
     dotenv::from_filename("tests/resources/.env").ok();
-    let mut app = test::init_service(
-        App::new()
-            .data(mock_app_state())
-            .route("/op/token", web::post().to(token_endpoint)),
-    )
-    .await;
+    let mut app = test::init_service(App::new().data(mock_app_state()).route("/op/token", web::post().to(token_endpoint))).await;
 
     let body = format!("grant_type=refresh_token&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()

@@ -68,11 +68,4 @@ diesel::joinable!(granted_scopes -> oauth_clients (client_id));
 diesel::joinable!(granted_scopes -> oauth_scopes (scope));
 diesel::joinable!(oauth_tokens -> oauth_clients (client_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    granted_scopes,
-    oauth_clients,
-    oauth_scopes,
-    oauth_sessions,
-    oauth_tokens,
-    users,
-);
+diesel::allow_tables_to_appear_in_same_query!(granted_scopes, oauth_clients, oauth_scopes, oauth_sessions, oauth_tokens, users,);

@@ -21,9 +21,7 @@ pub fn json_ok<T: serde::Serialize>(obj: T) -> Result<HttpResponse> {
 pub fn validate(expr: bool, message: &str) -> Result<String, AppError> {
     if !expr {
         info!("{:?}", message);
-        return Err(ValidationError {
-            msg: message.to_owned(),
-        });
+        return Err(ValidationError { msg: message.to_owned() });
     }
     Ok(String::new())
 }

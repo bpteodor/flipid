@@ -1,8 +1,8 @@
-use flipid::core::{self, load_encryption_material, AppState};
-use flipid::core::models::OauthClient;
-use flipid::oidc::authorize;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
+use flipid::core::models::OauthClient;
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::oidc::authorize;
 use mockall::predicate::*;
 
 #[actix_rt::test]
@@ -32,12 +32,7 @@ async fn test_authorize_get_goto_login() {
 #[actix_rt::test]
 async fn test_authorize_get_no_params() {
     dotenv::from_filename("tests/resources/.env").ok();
-    let mut app = test::init_service(
-        App::new()
-            .data(mock_app_state())
-            .route("/authorize", web::get().to(authorize::auth_get)),
-    )
-    .await;
+    let mut app = test::init_service(App::new().data(mock_app_state()).route("/authorize", web::get().to(authorize::auth_get))).await;
 
     let req = test::TestRequest::with_uri("/authorize").to_request();
     let resp = test::call_service(&mut app, req).await;
