@@ -7,18 +7,16 @@ use actix_web::cookie::SameSite;
 use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
+use dotenv::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
     env_logger::init();
 
     let cfg = core::config::load("config/config.yaml").expect("failed to load config/config.yaml");
-
-    if let Some(log_filter) = &cfg.core.log {
-        std::env::set_var("RUST_LOG", log_filter);
-    }
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(&cfg.database.url);
@@ -58,7 +56,7 @@ async fn main() -> std::io::Result<()> {
     log::info!("encrypted communication: {}", is_https);
 
     if !is_https {
-        log::debug!("starting on port {}...", &addr);
+        log::info!("starting on port {}...", &addr);
         srv.bind(addr)
     } else {
         log::debug!("starting with SSL on port {}...", &addr);
