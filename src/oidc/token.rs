@@ -1,4 +1,3 @@
-use crate::config;
 use crate::core;
 use crate::core::error::AppError::InternalError;
 use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState};
@@ -60,10 +59,10 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
 
 fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> Result<TokenResponse, AppError> {
     let now = Utc::now().naive_utc();
-    let exp = config::oauth_token_exp();
+    let exp = state.config.oauth.token_exp;
 
     let claims = IdTokenClaims {
-        iss: &config::oauth_iss(),
+        iss: &state.config.oauth.issuer.clone(),
         sub: &session.subject,
         aud: &session.client_id,
         nonce: session.nonce.as_ref(),
@@ -103,7 +102,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
         access_token: access_token.into(),
         refresh_token: Option::None,
         token_type: "Bearer".into(),
-        expires_in: config::oauth_token_exp(),
+        expires_in: state.config.oauth.token_exp,
         id_token,
     })
 }

@@ -1,3 +1,5 @@
+mod common;
+
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthToken, User};
@@ -43,10 +45,9 @@ async fn call_userinfo(
     user_db: Box<core::MockUserDatabase>,
     auth_header: Option<&str>,
 ) -> actix_web::dev::ServiceResponse {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/userinfo", web::get().to(userinfo_endoint)),
     )
     .await;

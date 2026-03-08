@@ -1,6 +1,7 @@
 use crate::core::error::AppError::InternalError;
-use crate::{config, core};
+use crate::core::{self, AppState};
 use actix_web::http::StatusCode;
+use actix_web::web::Data;
 use actix_web::{HttpRequest, HttpResponse, Result};
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -9,8 +10,8 @@ use openssl::rsa::Rsa;
 /**
  * GET /jwks
  */
-pub async fn get_keys(_r: HttpRequest) -> Result<HttpResponse> {
-    let content: Vec<u8> = core::load_file(&config::oauth_rsa_pem()).expect("failed to read certificates");
+pub async fn get_keys((_r, state): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
+    let content: Vec<u8> = core::load_file(&state.config.oauth.id_token.rsa_key).expect("failed to read certificates");
     let rsa = Rsa::private_key_from_pem(&content).map_err(|_| InternalError)?;
 
     // TODO add support for multiple key (key rotation)

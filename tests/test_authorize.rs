@@ -1,3 +1,5 @@
+mod common;
+
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
 use flipid::core::models::OauthClient;
@@ -7,7 +9,6 @@ use mockall::predicate::*;
 
 #[actix_rt::test]
 async fn test_authorize_get_goto_login() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
     oauth_db
@@ -18,7 +19,7 @@ async fn test_authorize_get_goto_login() {
 
     let mut app = test::init_service(
         App::new()
-            .data(AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/authorize", web::get().to(authorize::auth_get)),
     )
     .await;
@@ -31,7 +32,6 @@ async fn test_authorize_get_goto_login() {
 
 #[actix_rt::test]
 async fn test_authorize_get_no_params() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut app = test::init_service(App::new().data(mock_app_state()).route("/authorize", web::get().to(authorize::auth_get))).await;
 
     let req = test::TestRequest::with_uri("/authorize").to_request();
@@ -42,7 +42,7 @@ async fn test_authorize_get_no_params() {
 fn mock_app_state() -> AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
-    AppState::new(oauth_db, user_db, load_encryption_material())
+    AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config())
 }
 
 fn test_client1() -> OauthClient {

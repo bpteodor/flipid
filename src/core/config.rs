@@ -1,18 +1,19 @@
 use serde::Deserialize;
 use std::path::Path;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub core: CoreConfig,
+    pub database: DatabaseConfig,
     pub auth: AuthConfig,
     pub oauth: OauthConfig,
-    pub vault: Option<VaultConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct ServerConfig {
     pub address: String,
+    pub domain: Option<String>,
     pub port: u16,
     pub protocol: String,
     pub tls: Option<TlsConfig>,
@@ -26,13 +27,13 @@ impl ServerConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct TlsConfig {
     pub cert: String,
     pub key: String,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct CorsConfig {
     #[serde(default)]
     pub allow_origin: Vec<String>,
@@ -42,40 +43,52 @@ pub struct CorsConfig {
     pub allow_headers: Vec<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CoreConfig {
     pub log: Option<String>,
     #[serde(default = "default_true")]
     pub secure_cookies: bool,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct AuthConfig {
-    pub session_cookie: String,
-    pub session_key: String,
+#[derive(Debug, Clone, Deserialize)]
+pub struct DatabaseConfig {
+    pub url: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthConfig {
+    pub session_cookie: String,
+    //pub session_key: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct OauthConfig {
     pub issuer: String,
     pub scopes: String,
+    #[serde(default = "default_auth_code_exp")]
+    pub auth_code_exp: i64,
+    #[serde(default = "default_token_exp")]
+    pub token_exp: i64,
     pub id_token: IdTokenConfig,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct IdTokenConfig {
     pub signature: String,
     pub rsa_key: String,
     pub secret: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct VaultConfig {
-    pub keystore: String,
-}
-
 fn default_true() -> bool {
     true
+}
+
+fn default_auth_code_exp() -> i64 {
+    60
+}
+
+fn default_token_exp() -> i64 {
+    3600
 }
 
 pub fn load(path: impl AsRef<Path>) -> Result<Config, Box<dyn std::error::Error>> {

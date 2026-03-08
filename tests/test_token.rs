@@ -1,3 +1,5 @@
+mod common;
+
 use actix_web::http::StatusCode;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthClient, OauthSession};
@@ -42,7 +44,7 @@ fn expired_session(code: &str) -> OauthSession {
 fn mock_app_state() -> core::AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
-    core::AppState::new(oauth_db, user_db, load_encryption_material())
+    core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config())
 }
 
 /// "test1:test1" base64-encoded
@@ -52,7 +54,6 @@ const REDIRECT: &str = "http://localhost:8080/callback";
 
 #[actix_rt::test]
 async fn test_token_happy_path() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
@@ -72,7 +73,7 @@ async fn test_token_happy_path() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -98,7 +99,6 @@ async fn test_token_happy_path() {
 
 #[actix_rt::test]
 async fn test_token_expired_code() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
@@ -110,7 +110,7 @@ async fn test_token_expired_code() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -129,7 +129,6 @@ async fn test_token_expired_code() {
 
 #[actix_rt::test]
 async fn test_token_redirect_mismatch() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
@@ -147,7 +146,7 @@ async fn test_token_redirect_mismatch() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -169,7 +168,6 @@ async fn test_token_redirect_mismatch() {
 
 #[actix_rt::test]
 async fn test_token_invalid_credentials() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
@@ -187,7 +185,7 @@ async fn test_token_invalid_credentials() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -206,7 +204,6 @@ async fn test_token_invalid_credentials() {
 
 #[actix_rt::test]
 async fn test_token_unsupported_grant_type() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut app = test::init_service(App::new().data(mock_app_state()).route("/op/token", web::post().to(token_endpoint))).await;
 
     let body = format!("grant_type=refresh_token&code={}&redirect_uri={}", CODE, REDIRECT);
@@ -223,7 +220,6 @@ async fn test_token_unsupported_grant_type() {
 
 #[actix_rt::test]
 async fn test_token_code_not_found() {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
@@ -235,7 +231,7 @@ async fn test_token_code_not_found() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;

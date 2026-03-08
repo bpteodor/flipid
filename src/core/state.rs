@@ -1,4 +1,4 @@
-use crate::config;
+use crate::core::config::Config;
 use crate::core::{OauthDatabase, UserDatabase};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::http::StatusCode;
@@ -9,15 +9,17 @@ pub struct AppState {
     pub oauth_db: Box<dyn OauthDatabase>,
     pub user_db: Box<dyn UserDatabase>,
     pub rsa_key: jwt::EncodingKey,
+    pub config: Config,
 }
 
 impl AppState {
-    pub fn new(oauth_db: Box<dyn OauthDatabase>, user_db: Box<dyn UserDatabase>, rsa: jwt::EncodingKey) -> Self {
+    pub fn new(oauth_db: Box<dyn OauthDatabase>, user_db: Box<dyn UserDatabase>, rsa: jwt::EncodingKey, config: Config) -> Self {
         AppState {
             template: tera::Tera::new("templates/**/*.html").expect("failed to initialize tera templating"),
             oauth_db,
             user_db,
             rsa_key: rsa,
+            config,
         }
     }
 
@@ -35,7 +37,7 @@ impl AppState {
     }
 }
 
-pub fn load_encryption_material() -> jwt::EncodingKey {
-    let pem: Vec<u8> = crate::core::load_file(&config::oauth_rsa_pem()).expect("failed to read certificates");
+pub fn load_encryption_material(rsa_pem_path: &str) -> jwt::EncodingKey {
+    let pem: Vec<u8> = crate::core::load_file(rsa_pem_path).expect("failed to read certificates");
     jwt::EncodingKey::from_rsa_pem(&pem).expect("failed to load key")
 }

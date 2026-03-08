@@ -2,7 +2,6 @@ use super::core;
 use super::core::error::{AppError, InternalError, InternalError::SessionError};
 use super::core::models::OauthSession;
 use super::core::AppState;
-use crate::config;
 use actix_session::Session;
 use actix_web::http::header::CONTENT_LOCATION; // header "location" is blocked by cors
 use actix_web::http::StatusCode;
@@ -80,7 +79,7 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
 
     let auth_code_exp = Utc::now()
         .naive_utc()
-        .checked_add_signed(Duration::minutes(config::oidc_auth_code_exp()))
+        .checked_add_signed(Duration::minutes(state.config.oauth.auth_code_exp))
         .unwrap();
     let auth_time = session.get::<i64>("auth_time").unwrap().map(|x| NaiveDateTime::from_timestamp(x, 0));
 
