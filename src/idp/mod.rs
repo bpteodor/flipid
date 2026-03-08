@@ -51,7 +51,7 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     //let ss = requested_scopes.into_iter().filter(|s| !granted_scopes.contains(s)).collect();
 
     session.insert("subject", &user.id)?;
-    session.insert("auth_time", Utc::now().naive_utc().timestamp())?;
+    session.insert("auth_time", Utc::now().naive_utc().and_utc().timestamp())?;
 
     if new_scopes.len() == 0 {
         let callback_url = generate_callback(&session, &client_id, &state, scopes)?;

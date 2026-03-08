@@ -67,9 +67,9 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
         sub: &session.subject,
         aud: &session.client_id,
         nonce: session.nonce.as_ref(),
-        exp: now.checked_add_signed(Duration::seconds(exp)).unwrap_or(now).timestamp(),
-        iat: now.timestamp(),
-        auth_time: session.auth_time.map(|d| d.timestamp()),
+        exp: now.checked_add_signed(Duration::seconds(exp)).unwrap_or(now).and_utc().timestamp(),
+        iat: now.and_utc().timestamp(),
+        auth_time: session.auth_time.map(|d| d.and_utc().timestamp()),
     };
     debug!("claims: {:?}", &claims);
 
