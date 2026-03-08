@@ -120,7 +120,7 @@ struct UserInfoClaims<'a> {
 }
 
 impl<'a> UserInfoClaims<'a> {
-    fn new(sub: &str) -> UserInfoClaims {
+    fn new(sub: &str) -> UserInfoClaims<'_> {
         UserInfoClaims { sub, ..Default::default() }
     }
 }

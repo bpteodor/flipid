@@ -49,7 +49,7 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_clients::dsl::*;
         trace!("fetch_client_config({})...", client_id);
 
-        let mut conn = get_connection(self).map_err(|e| QueryBuilderError(Box::from("failed to get DB conection")))?;
+        let mut conn = get_connection(self).map_err(|_e| QueryBuilderError(Box::from("failed to get DB conection")))?;
         let row = oauth_clients.find(client_id).first::<OauthClientRow>(&mut conn)?;
         let item = models::OauthClient::try_from(row).map_err(|e| QueryBuilderError(Box::from(format!("invalid callback_url JSON: {}", e))))?;
 
