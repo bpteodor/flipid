@@ -91,7 +91,7 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
     state.oauth_db.save_oauth_session(OauthSession {
         auth_code: auth_code.clone(),
         client_id: client.id,
-        scopes: scopes,
+        scopes,
         nonce: session.get::<String>("nonce").unwrap_or(Option::None),
         subject: session.get::<String>("subject").unwrap().unwrap(),
         expiration: auth_code_exp,
