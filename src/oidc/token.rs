@@ -72,18 +72,27 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     };
     debug!("claims: {:?}", &claims);
 
-    /*
-    let mut header = Header::new(Algorithm::HS512);
-    //header.kid = Some("blabla".to_owned());
-    let id_token = encode(
-        &header,
-        &claims,
-        &EncodingKey::from_secret(config::oauth_jwt_secret().as_ref()), // TODO reuse
-    )
-    .map_err(|e| InternalError("JWT encoding".into(), Box::new(e)))?;
-    */
-    let header = Header::new(Algorithm::RS256);
-    let id_token = encode(&header, &claims, &state.rsa_key).map_err(|_| InternalError)?;
+    let (sign_alg, key) = match state.config.oauth.id_token.signature.as_str() {
+        // symetric alg
+        "HS256" => (
+            Algorithm::HS256,
+            &jwt::EncodingKey::from_secret(state.config.oauth.id_token.secret.clone().unwrap().as_bytes()),
+        ),
+        "HS512" => (
+            Algorithm::HS512,
+            &jwt::EncodingKey::from_secret(state.config.oauth.id_token.secret.clone().unwrap().as_bytes()),
+        ),
+        "ES256" => (Algorithm::ES256,&state.es_key),
+        // asymetric algorithms
+        "RS512" => (Algorithm::RS512, &state.rsa_key),
+        // RS256 is default
+        _ => (Algorithm::RS256, &state.rsa_key),
+    };
+    let header = Header::new(sign_alg);
+    let id_token = encode(&header, &claims, &key).map_err(|e| {
+        log::error!("JWT encoding error. (alg: {:?}) (cause: {})", sign_alg, e);
+        InternalError
+    })?;
 
     state
         .oauth_db

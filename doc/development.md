@@ -6,12 +6,22 @@ Some random stuff usefull for development.
 
 ### 1. Cryptografic material
 ```sh
-# generate RSA keys for the JWT (RS256 alg)
 cd config
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com" -f ./id_rsa
-ssh-keygen -p -m PEM -f id_rsa
-openssl rsa -in id_rsa -outform pem > id_rsa.pem
-# (optional) generate cert + key for the server
+
+# generate RSA keys for the JWT (RS256 alg)
+openssl genrsa -out rsa.key 4096
+
+# generate eliptic courve keys
+openssl ecparam -name prime256v1 -genkey -noout -out es256.key
+openssl pkcs8 -topk8 -nocrypt -in es256.key -out es256.pkcs8.key # workaround: convert to PKCS8 (https://github.com/Keats/jsonwebtoken?tab=readme-ov-file#convert-sec1-private-key-to-pkcs8)
+
+openssl ecparam -name secp384r1 -genkey -noout -out es384.key
+openssl pkcs8 -topk8 -nocrypt -in es384.key -out es384.pkcs8.key
+
+openssl ecparam -name secp521r1 -genkey -noout -out es512.key
+openssl pkcs8 -topk8 -nocrypt -in es512.key -out es512.pkcs8.key
+
+# (optional) generate TLS cert + key for the server
 openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.cert -nodes
 ```
 

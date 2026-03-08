@@ -77,6 +77,7 @@ pub struct IdTokenConfig {
     pub signature: String,
     pub rsa_key: String,
     pub secret: Option<String>,
+    pub es_key: String,
 }
 
 fn default_true() -> bool {

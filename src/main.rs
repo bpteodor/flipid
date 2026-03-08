@@ -1,4 +1,4 @@
-use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::{self, load_encryption_material, load_es_key, AppState};
 use flipid::{db, idp, oidc};
 
 use actix_files as fs;
@@ -24,6 +24,7 @@ async fn main() -> std::io::Result<()> {
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
     let rsa_key = load_encryption_material(&cfg.oauth.id_token.rsa_key);
+    let es_key = load_es_key(&cfg.oauth.id_token.es_key);
     let session_key = Key::generate(); //Key::from(cfg.auth.session_key.as_bytes());
 
     let addr = format!("{}:{}", &cfg.server.address, &cfg.server.port);
@@ -32,7 +33,7 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), rsa_key.clone(), cfg.clone())))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), rsa_key.clone(), es_key.clone(), cfg.clone())))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors(&cfg.server.cors))
             .wrap(init_session(session_key.clone(), &cfg))
