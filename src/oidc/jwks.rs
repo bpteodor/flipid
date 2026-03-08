@@ -11,16 +11,22 @@ use openssl::rsa::Rsa;
  * GET /jwks
  */
 pub async fn get_keys((_r, state): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
-    let content: Vec<u8> = core::load_file(&state.config.oauth.id_token.rsa_key).expect("failed to read certificates");
-    let rsa = Rsa::private_key_from_pem(&content).map_err(|_| InternalError)?;
+    // collect (kid, exponent, modulus) for all RSA secrets so borrows outlive the Jwk slice
+    let rsa_params: Vec<(String, String, String)> = state
+        .secrets
+        .values()
+        .filter(|(_, s)| s.scope == "RS256" || s.scope == "RS512")
+        .map(|(name, secret)| {
+            let rsa = Rsa::private_key_from_pem(&secret.raw).map_err(|_| InternalError)?;
+            let exponent = BASE64_URL_SAFE_NO_PAD.encode(rsa.e().to_vec());
+            let modulus = BASE64_URL_SAFE_NO_PAD.encode(rsa.n().to_vec());
+            Ok((name.clone(), exponent, modulus))
+        })
+        .collect::<Result<_, actix_web::Error>>()?;
 
-    // TODO add support for multiple key (key rotation)
-    let kid = "1";
-    let exponent: String = BASE64_URL_SAFE_NO_PAD.encode(rsa.e().to_vec());
-    // base64::encode_config(&rsa.e().to_vec(), base64::URL_SAFE_NO_PAD);
-    let modulus: String = BASE64_URL_SAFE_NO_PAD.encode(rsa.n().to_vec());
+    // TODO: add EC key support (ES256/ES384/ES512)
+    let keys: Vec<Jwk> = rsa_params.iter().map(|(kid, e, m)| Jwk::rsa_sig(kid, e, m)).collect();
 
-    let keys = vec![Jwk::rsa_sig(kid, &exponent, &modulus)];
     core::send_json(StatusCode::OK, Jwks { keys })
 }
 

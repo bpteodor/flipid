@@ -4,7 +4,8 @@ use actix_web::http::StatusCode;
 use actix_web::web::Data;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthToken, User};
-use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::{self, AppState, Secrets};
+use std::sync::Arc;
 use flipid::oidc::userinfo::userinfo_endoint;
 use mockall::predicate::*;
 
@@ -51,7 +52,7 @@ async fn call_userinfo(
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
                 common::test_config(),
             )))
             .route("/op/userinfo", web::get().to(userinfo_endoint)),

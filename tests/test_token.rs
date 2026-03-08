@@ -3,8 +3,9 @@ mod common;
 use actix_web::http::StatusCode;
 use actix_web::{test, web, web::Data, App};
 use flipid::core::models::{OauthClient, OauthSession};
-use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::{self, AppState, Secrets};
 use flipid::oidc::token::token_endpoint;
+use std::sync::Arc;
 use mockall::predicate::*;
 
 fn test_client() -> OauthClient {
@@ -41,10 +42,15 @@ fn expired_session(code: &str) -> OauthSession {
     }
 }
 
+fn test_secrets() -> Arc<Secrets> {
+    let cfg = common::test_config();
+    Arc::new(Secrets::load(&cfg.secrets).expect("failed to load test secrets"))
+}
+
 fn mock_app_state() -> AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
-    AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config())
+    AppState::new(oauth_db, user_db, test_secrets(), common::test_config())
 }
 
 /// "test1:test1" base64-encoded
@@ -76,7 +82,7 @@ async fn test_token_happy_path() {
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                test_secrets(),
                 common::test_config(),
             )))
             .route("/op/token", web::post().to(token_endpoint)),
@@ -118,7 +124,7 @@ async fn test_token_expired_code() {
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                test_secrets(),
                 common::test_config(),
             )))
             .route("/op/token", web::post().to(token_endpoint)),
@@ -159,7 +165,7 @@ async fn test_token_redirect_mismatch() {
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                test_secrets(),
                 common::test_config(),
             )))
             .route("/op/token", web::post().to(token_endpoint)),
@@ -203,7 +209,7 @@ async fn test_token_invalid_credentials() {
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                test_secrets(),
                 common::test_config(),
             )))
             .route("/op/token", web::post().to(token_endpoint)),
@@ -259,7 +265,7 @@ async fn test_token_code_not_found() {
             .app_data(Data::new(AppState::new(
                 oauth_db,
                 user_db,
-                load_encryption_material(common::TEST_RSA_PEM),
+                test_secrets(),
                 common::test_config(),
             )))
             .route("/op/token", web::post().to(token_endpoint)),

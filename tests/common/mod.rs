@@ -1,6 +1,7 @@
-use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, ServerConfig};
+use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, SecretConfig, ServerConfig};
 
 pub const TEST_RSA_PEM: &str = "tests/resources/config/id_rsa.pem";
+pub const TEST_SECRET_NAME: &str = "rsa1";
 
 pub fn test_config() -> Config {
     Config {
@@ -21,7 +22,6 @@ pub fn test_config() -> Config {
         },
         auth: AuthConfig {
             session_cookie: "SID".into(),
-            //session_key: "123421341234123423432412341234dfsafsfasd".into(),
         },
         oauth: OauthConfig {
             issuer: "https://flipid.local:9000".into(),
@@ -30,9 +30,14 @@ pub fn test_config() -> Config {
             token_exp: 3600,
             id_token: IdTokenConfig {
                 signature: "RS256".into(),
-                rsa_key: TEST_RSA_PEM.into(),
-                secret: None,
+                key: TEST_SECRET_NAME.into(),
             },
         },
+        secrets: vec![SecretConfig {
+            name: TEST_SECRET_NAME.into(),
+            scope: "RS256".into(),
+            value: None,
+            file: Some(TEST_RSA_PEM.into()),
+        }],
     }
 }

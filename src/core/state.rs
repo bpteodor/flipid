@@ -1,26 +1,26 @@
 use crate::core::config::Config;
+use crate::core::secrets::Secrets;
 use crate::core::{OauthDatabase, UserDatabase};
 use actix_web::error::ErrorInternalServerError;
 use actix_web::http::StatusCode;
 use actix_web::{HttpResponse, Result};
+use std::sync::Arc;
 
 pub struct AppState {
     pub template: tera::Tera,
     pub oauth_db: Box<dyn OauthDatabase>,
     pub user_db: Box<dyn UserDatabase>,
-    pub rsa_key: jwt::EncodingKey,
-    pub es_key: jwt::EncodingKey,
+    pub secrets: Arc<Secrets>,
     pub config: Config,
 }
 
 impl AppState {
-    pub fn new(oauth_db: Box<dyn OauthDatabase>, user_db: Box<dyn UserDatabase>, rsa: jwt::EncodingKey,es: jwt::EncodingKey, config: Config) -> Self {
+    pub fn new(oauth_db: Box<dyn OauthDatabase>, user_db: Box<dyn UserDatabase>, secrets: Arc<Secrets>, config: Config) -> Self {
         AppState {
             template: tera::Tera::new("templates/**/*.html").expect("failed to initialize tera templating"),
             oauth_db,
             user_db,
-            rsa_key: rsa,
-            es_key: es,
+            secrets,
             config,
         }
     }
@@ -37,16 +37,4 @@ impl AppState {
 
         Ok(resp)
     }
-}
-
-pub fn load_encryption_material(rsa_pem_path: &str) -> jwt::EncodingKey {
-    let pem: Vec<u8> = crate::core::load_file(rsa_pem_path).expect("failed to read RSA key file");
-    jwt::EncodingKey::from_rsa_pem(&pem).expect("failed to load RSA key")
-}
-
-pub fn load_es_key(key_path: &str) -> jwt::EncodingKey {
-    let pem: Vec<u8> = crate::core::load_file(key_path).expect("failed to load ES Key");
-    jwt::EncodingKey::from_ec_pem(&pem).expect("invalid EC Key") // ecdsa
-    //jwt::EncodingKey::from_ed_der(&pem)
-    //jwt::EncodingKey::from_ed_pem(&pem).expect("invalid ED Key")
 }
