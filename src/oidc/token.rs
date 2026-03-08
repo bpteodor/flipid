@@ -8,6 +8,7 @@ use chrono::{offset::Utc, Duration};
 use jwt::{encode, Algorithm, Header};
 use rand::distr::Alphanumeric;
 use rand::RngExt;
+use base64::prelude::*;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct TokenParams {
@@ -115,7 +116,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
 /// ```
 fn calc_auth(user: &str, pass: &str) -> String {
     let txt = format!("{}:{}", user, pass);
-    let b64 = base64::encode(txt.as_bytes());
+    let b64 = BASE64_STANDARD.encode(txt.as_bytes());
     trace!("received: {}", b64); // TODO remove this
     format!("Basic {}", &b64)
 }
