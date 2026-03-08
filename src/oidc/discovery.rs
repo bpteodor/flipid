@@ -1,6 +1,7 @@
-use crate::config;
 use crate::core;
+use crate::core::AppState;
 use actix_web::http::StatusCode;
+use actix_web::web::Data;
 use actix_web::{HttpRequest, HttpResponse, Result};
 
 /**
@@ -8,8 +9,8 @@ use actix_web::{HttpRequest, HttpResponse, Result};
  *
  * Discovery End-Point: https://openid.net/specs/openid-connect-discovery-1_0.html
  */
-pub async fn openid_config(_req: HttpRequest) -> Result<HttpResponse> {
-    let issuer_url = config::oauth_iss();
+pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
+    let issuer_url = &state.config.oauth.issuer;
 
     let prov_config = OIDCProviderConfig {
         issuer: issuer_url.clone(),
@@ -17,7 +18,7 @@ pub async fn openid_config(_req: HttpRequest) -> Result<HttpResponse> {
         token_endpoint: issuer_url.clone() + "/op/token",
         userinfo_endpoint: Some(issuer_url.clone() + "/op/userinfo"),
         jwks_uri: issuer_url.clone() + "/op/jwks",
-        scopes_supported: Some(supported_scopes()),
+        scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
         response_types_supported: vec!["code".into()], // TODO support more flows (at least token)
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more
         subject_types_supported: vec!["public".into()], // TODO add pairwise too?
@@ -69,8 +70,7 @@ pub struct OIDCProviderConfig {
                                            // TODO add all fields
 }
 
-pub fn supported_scopes() -> Vec<String> {
-    let scopes = config::oauth_supported_scopes();
+pub fn supported_scopes(scopes: &str) -> Vec<String> {
     scopes.split_whitespace().map(String::from).collect::<Vec<String>>()
 }
 

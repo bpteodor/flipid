@@ -8,6 +8,29 @@ use diesel::result::Error::QueryBuilderError;
 use r2d2::PooledConnection;
 use std::collections::HashSet;
 
+#[derive(Queryable)]
+struct OauthClientRow {
+    pub id: String,
+    pub secret: String,
+    pub name: String,
+    pub callback_url: String,
+    pub allowed_scopes: String,
+}
+
+impl TryFrom<OauthClientRow> for models::OauthClient {
+    type Error = serde_json::Error;
+
+    fn try_from(row: OauthClientRow) -> Result<Self, Self::Error> {
+        Ok(models::OauthClient {
+            id: row.id,
+            secret: row.secret,
+            name: row.name,
+            callback_url: serde_json::from_str(&row.callback_url)?,
+            allowed_scopes: row.allowed_scopes,
+        })
+    }
+}
+
 //pub mod models;
 pub mod schema;
 
@@ -18,8 +41,7 @@ pub struct DbSqlBridge(pub Pool<ConnectionManager<SqliteConnection>>);
 pub type DbPooledConnection = PooledConnection<ConnectionManager<SqliteConnection>>;
 
 fn get_connection(br: &DbSqlBridge) -> Result<DbPooledConnection, InternalError> {
-    br.0.get()
-        .map_err(|_e| InternalError::query_fail("Cannot get DB connection"))
+    br.0.get().map_err(|_e| InternalError::query_fail("Cannot get DB connection"))
 }
 
 impl OauthDatabase for DbSqlBridge {
@@ -27,8 +49,9 @@ impl OauthDatabase for DbSqlBridge {
         use self::schema::oauth_clients::dsl::*;
         trace!("fetch_client_config({})...", client_id);
 
-        let mut conn = get_connection(self).map_err(|e| QueryBuilderError(Box::from("failed to get DB conection")))?;
-        let item = oauth_clients.find(client_id).first::<models::OauthClient>(&mut conn)?;
+        let mut conn = get_connection(self).map_err(|_e| QueryBuilderError(Box::from("failed to get DB conection")))?;
+        let row = oauth_clients.find(client_id).first::<OauthClientRow>(&mut conn)?;
+        let item = models::OauthClient::try_from(row).map_err(|e| QueryBuilderError(Box::from(format!("invalid callback_url JSON: {}", e))))?;
 
         trace!("client-config: {:?}", item);
         Ok(item)
@@ -84,7 +107,7 @@ impl OauthDatabase for DbSqlBridge {
             .execute(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error deleting oauth session by code {}", code)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -170,7 +193,7 @@ impl OauthDatabase for DbSqlBridge {
             .load::<models::OauthToken>(&mut conn)
             .map_err(|_| InternalError::query_fail("error loading token"))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -194,7 +217,7 @@ impl UserDatabase for DbSqlBridge {
             .load::<models::User>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -214,7 +237,7 @@ impl UserDatabase for DbSqlBridge {
             .load::<models::User>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 

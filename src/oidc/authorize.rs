@@ -25,9 +25,7 @@ fn handle_auth(data: &AuthParams, state: &Data<AppState>, session: &Session) -> 
     match validate_auth(data, state)? {
         Some(e) => {
             info!("Validation ERROR {:?}", &e);
-            Ok(HttpResponse::Found()
-                .append_header((LOCATION, callback_error(data, e)?))
-                .finish())
+            Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
         }
         None => {
             set_on_session(data, session)?;
@@ -85,12 +83,11 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
     let client_id = data.client_id.as_ref().unwrap();
     let client = state
         .oauth_db
-        .fetch_client_config(&client_id)
+        .fetch_client_config(client_id)
         .map_err(|_| AppError::bad_req("Unknown or invalid client_id "))?;
 
-    let callback_urls = client.callback_urls().map_err(|_| AppError::InternalError)?;
-    if !callback_urls.contains(&redirect_uri) {
-        return Err(AppError::bad_req("'redirect_uri' is invaliid"));
+    if !client.callback_url.contains(redirect_uri) {
+        return Err(AppError::bad_req("'redirect_uri' is invalid"));
     }
 
     if data.scope.is_some() {
@@ -103,7 +100,7 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
 
         // only client configured scopes are allowed
         let client_scopes: HashSet<&str> = client.allowed_scopes.split_whitespace().collect();
-        if (&scopes - &client_scopes).len() > 0 {
+        if !(&scopes - &client_scopes).is_empty() {
             return Ok(Some(OauthError::new("invalid_scope", "scope not allowed")));
         }
     }
@@ -133,7 +130,7 @@ fn set_on_session(data: &AuthParams, session: &Session) -> Result<(), Error> {
     Ok(())
 }
 
-static RESPONSE_TYPES: [&'static str; 8] = [
+static RESPONSE_TYPES: [&str; 8] = [
     "code",
     "token",
     "id_token",

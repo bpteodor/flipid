@@ -54,10 +54,7 @@ pub async fn userinfo_endoint((req, ctx): (HttpRequest, Data<AppState>)) -> Resu
     if granted_scopes.contains("profile") {
         user_info.given_name = Some(String::from(&user.given_name));
         user_info.family_name = Some(String::from(&user.family_name));
-        user_info.name = Some(
-            user.preferred_display_name
-                .unwrap_or(format!("{} {}", user.given_name, user.family_name)),
-        );
+        user_info.name = Some(user.preferred_display_name.unwrap_or(format!("{} {}", user.given_name, user.family_name)));
         user_info.locale = user.locale;
         user_info.birthdate = user.birthdate;
     }
@@ -123,10 +120,7 @@ struct UserInfoClaims<'a> {
 }
 
 impl<'a> UserInfoClaims<'a> {
-    fn new(sub: &str) -> UserInfoClaims {
-        UserInfoClaims {
-            sub,
-            ..Default::default()
-        }
+    fn new(sub: &str) -> UserInfoClaims<'_> {
+        UserInfoClaims { sub, ..Default::default() }
     }
 }

@@ -1,5 +1,5 @@
-use flipid::core::{load_encryption_material, AppState};
-use flipid::{config, db, idp, oidc};
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::{db, idp, oidc};
 
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -7,42 +7,42 @@ use actix_web::cookie::SameSite;
 use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
-use dotenv::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
-
     env_logger::init();
 
+    let cfg = core::config::load("config/config.yaml").expect("failed to load config/config.yaml");
+
+    if let Some(log_filter) = &cfg.core.log {
+        std::env::set_var("RUST_LOG", log_filter);
+    }
+
     // setup db connection
-    let manager = ConnectionManager::<SqliteConnection>::new(config::database_url());
-    let pool = r2d2::Pool::builder()
-        .build(manager)
-        .expect("Failed to create connection pool.");
+    let manager = ConnectionManager::<SqliteConnection>::new(&cfg.database.url);
+    let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
-    let session_key = Key::generate();
+
+    let rsa_key = load_encryption_material(&cfg.oauth.id_token.rsa_key);
+    let session_key = Key::generate(); //Key::from(cfg.auth.session_key.as_bytes());
+
+    let addr = format!("{}:{}", &cfg.server.address, &cfg.server.port);
+    let is_https = cfg.server.is_https();
+    let tls_cfg = cfg.server.tls.clone();
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(
-                db.clone(),
-                db.clone(),
-                load_encryption_material(),
-            )))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), rsa_key.clone(), cfg.clone())))
             .wrap(middleware::Logger::default()) // logging
-            .wrap(init_cors())
-            .wrap(init_session(session_key.clone()))
+            .wrap(init_cors(&cfg.server.cors))
+            .wrap(init_session(session_key.clone(), &cfg))
             // static resources
             .service(fs::Files::new("/s", ".").show_files_listing())
             .route("/favicon.ico", web::get().to(favicon))
             // openid provider
-            .route(
-                "/.well-known/openid-configuration",
-                web::get().to(oidc::discovery::openid_config),
-            )
+            .route("/.well-known/openid-configuration", web::get().to(oidc::discovery::openid_config))
             .route("/op/authorize", web::get().to(oidc::authorize::auth_get))
             .route("/op/authorize", web::post().to(oidc::authorize::auth_post))
             .route("/op/token", web::post().to(oidc::token::token_endpoint))
@@ -55,15 +55,14 @@ async fn main() -> std::io::Result<()> {
             .route("/idp/cancel", web::post().to(idp::cancel_login))
     });
 
-    let addr = format!("0.0.0.0:{}", &config::port());
-    log::info!("encrypted communication: {}", config::is_protocol_https());
+    log::info!("encrypted communication: {}", is_https);
 
-    if !config::is_protocol_https() {
-        log::debug!("starting on port {}...", &config::port());
+    if !is_https {
+        log::debug!("starting on port {}...", &addr);
         srv.bind(addr)
     } else {
-        log::debug!("starting with SSL on port {}...", &config::port());
-        let ssl = load_server_cert();
+        log::debug!("starting with SSL on port {}...", &addr);
+        let ssl = load_server_cert(tls_cfg.as_ref().expect("tls config required for https"));
         srv.bind_openssl(addr, ssl)
     }
     .expect("occupied port")
@@ -75,46 +74,42 @@ async fn favicon(_req: HttpRequest) -> Result<fs::NamedFile> {
     Ok(fs::NamedFile::open("static/favicon.ico")?)
 }
 
-fn load_server_cert() -> openssl::ssl::SslAcceptorBuilder {
-    log::info!("loading cert {}...", config::server_cert());
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
-        .expect(&("failed to load cert from ".to_string() + &config::server_cert()));
+fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorBuilder {
+    log::info!("loading cert {}...", tls.cert);
+    let mut builder =
+        SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap_or_else(|_| panic!("{}", ("failed to load cert from ".to_string() + &tls.cert)));
     builder
-        .set_private_key_file(config::server_key(), SslFiletype::PEM)
+        .set_private_key_file(&tls.key, SslFiletype::PEM)
         .expect("failed to load server-key");
-    builder
-        .set_certificate_chain_file(config::server_cert())
-        .expect("failed to load server-cert");
+    builder.set_certificate_chain_file(&tls.cert).expect("failed to load server-cert");
     builder
 }
 
-fn init_session(secret_key: Key) -> SessionMiddleware<CookieSessionStore> {
-    let base_uri = config::base_uri();
-    log::debug!("secure cookies: {}", config::is_secure_cookies());
-
-    // validate: domain is set
-    base_uri.host().expect("invalid issuer: no domain");
+fn init_session(secret_key: Key, cfg: &core::config::Config) -> SessionMiddleware<CookieSessionStore> {
+    //log::debug!("session cookie: [{}] on {}", cfg.auth.secure_cookies, cfg.server.domain);
 
     SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
-        .cookie_name("SID".to_string())
-        .cookie_domain(base_uri.host().map(str::to_string))
-        .cookie_path(base_uri.path().to_string())
+        .cookie_name(cfg.auth.session_cookie.clone())
+        .cookie_domain(cfg.server.domain.clone())
+        //.cookie_path("/") // todo configurable
         .cookie_http_only(true)
         .cookie_same_site(SameSite::Strict)
-        .cookie_secure(config::is_secure_cookies())
+        .cookie_secure(cfg.core.secure_cookies)
         .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
         //.cookie_content_security(actix_session::config::CookieContentSecurity::Signed) // do not commit - INSECURE - for debug only
         .build()
 }
 
-fn init_cors() -> middleware::DefaultHeaders {
-    // TODO: move to config
-    middleware::DefaultHeaders::new() // CORS
-        .add(("Access-Control-Allow-Origin", "https://fonts.gstatic.com"))
-        .add(("Access-Control-Allow-Methods", "GET"))
-        .add(("Access-Control-Allow-Headers", "Content-Type"))
-        .add((
-            "Access-Control-Request-Headers",
-            "X-Requested-With, accept, content-type",
-        ))
+fn init_cors(cors: &core::config::CorsConfig) -> middleware::DefaultHeaders {
+    let mut headers = middleware::DefaultHeaders::new();
+    for origin in &cors.allow_origin {
+        headers = headers.add(("Access-Control-Allow-Origin", origin.as_str()));
+    }
+    for method in &cors.allow_methods {
+        headers = headers.add(("Access-Control-Allow-Methods", method.as_str()));
+    }
+    for header in &cors.allow_headers {
+        headers = headers.add(("Access-Control-Allow-Headers", header.as_str()));
+    }
+    headers.add(("Access-Control-Request-Headers", "X-Requested-With, accept, content-type"))
 }

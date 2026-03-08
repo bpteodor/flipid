@@ -38,7 +38,9 @@ crypto-hash = "0.3"
 rand = "0.10"
 base64 = "0.22"
 
-failure = "0.1"
+serde_yaml = "0.9"
+
+thiserror = "2"
 log = "0.4"
 env_logger = "0.11"
 

@@ -1,7 +1,6 @@
-use crate::config;
 use crate::core;
 use crate::core::error::AppError::InternalError;
-use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState};
+use crate::core::{basic_auth, error::AppError, models::OauthSession, models::OauthToken, AppState};
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
@@ -20,9 +19,7 @@ pub struct TokenParams {
 /// POST /token
 ///
 /// [Specifications](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint)
-pub async fn token_endpoint(
-    (data, state, req): (Form<TokenParams>, Data<AppState>, HttpRequest),
-) -> Result<HttpResponse> {
+pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     debug!("form: [{:?}]", data);
     match data.grant_type.to_lowercase().as_ref() {
         "authorization_code" => {
@@ -35,24 +32,19 @@ pub async fn token_endpoint(
                 .fetch_client_config(&session.client_id)
                 .map_err(|_| AppError::bad_req("failed to load the client config"))?;
 
-            let callback_urls = client.callback_urls().map_err(|_| AppError::InternalError)?;
-            if !callback_urls.contains(&data.redirect_uri) {
+            if !client.callback_url.contains(&data.redirect_uri) {
                 return Err(AppError::bad_req("redirect_uri mismatch"))?;
             }
 
             let cred = req.headers().get(AUTHORIZATION).unwrap().to_str().unwrap();
-            trace!("cred: {}", cred); // TODO remove this
-            if cred != calc_auth(&client.id, &client.secret) {
+            //trace!("cred: {}", cred);
+            if cred != basic_auth(&client.id, &client.secret) {
                 info!("invalid credentials");
                 return Err(AppError::Unauthorized)?;
             }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
-            let access_token: String = rand::rng()
-                .sample_iter(&Alphanumeric)
-                .take(30)
-                .map(char::from)
-                .collect::<String>();
+            let access_token: String = rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect::<String>();
 
             let id_token = gen_id_token(&state, session, &access_token)?;
             core::json_ok(id_token)
@@ -67,19 +59,16 @@ pub async fn token_endpoint(
 
 fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> Result<TokenResponse, AppError> {
     let now = Utc::now().naive_utc();
-    let exp = config::oauth_token_exp();
+    let exp = state.config.oauth.token_exp;
 
     let claims = IdTokenClaims {
-        iss: &config::oauth_iss(),
+        iss: &state.config.oauth.issuer.clone(),
         sub: &session.subject,
         aud: &session.client_id,
         nonce: session.nonce.as_ref(),
-        exp: now
-            .checked_add_signed(Duration::seconds(exp))
-            .unwrap_or(now)
-            .timestamp(),
-        iat: now.timestamp(),
-        auth_time: session.auth_time.map(|d| d.timestamp()),
+        exp: now.checked_add_signed(Duration::seconds(exp)).unwrap_or(now).and_utc().timestamp(),
+        iat: now.and_utc().timestamp(),
+        auth_time: session.auth_time.map(|d| d.and_utc().timestamp()),
     };
     debug!("claims: {:?}", &claims);
 
@@ -94,7 +83,7 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     .map_err(|e| InternalError("JWT encoding".into(), Box::new(e)))?;
     */
     let header = Header::new(Algorithm::RS256);
-    let id_token = encode(&header, &claims, &state.rsa).map_err(|_| InternalError)?;
+    let id_token = encode(&header, &claims, &state.rsa_key).map_err(|_| InternalError)?;
 
     state
         .oauth_db
@@ -113,22 +102,9 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
         access_token: access_token.into(),
         refresh_token: Option::None,
         token_type: "Bearer".into(),
-        expires_in: config::oauth_token_exp(),
+        expires_in: state.config.oauth.token_exp,
         id_token,
     })
-}
-
-/// calculates the expected value for the "Authentication" header
-///
-/// # Examples
-/// ```ignore
-/// assert_eq!(calc_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
-/// ```
-fn calc_auth(user: &str, pass: &str) -> String {
-    let txt = format!("{}:{}", user, pass);
-    let b64 = base64::encode(txt.as_bytes());
-    trace!("received: {}", b64); // TODO remove this
-    format!("Basic {}", &b64)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -158,14 +134,4 @@ struct IdTokenClaims<STR: AsRef<str>> {
     //amr: Option<String>,
     //#[serde(skip_serializing_if = "Option::is_none")]
     //azp: Option<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calc_auth() {
-        assert_eq!(calc_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
-    }
 }

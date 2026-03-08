@@ -1,8 +1,11 @@
-use flipid::core::{self, load_encryption_material, AppState};
-use flipid::core::models::{OauthToken, User};
-use flipid::oidc::userinfo::userinfo_endoint;
+mod common;
+
 use actix_web::http::StatusCode;
+use actix_web::web::Data;
 use actix_web::{test, web, App};
+use flipid::core::models::{OauthToken, User};
+use flipid::core::{self, load_encryption_material, AppState};
+use flipid::oidc::userinfo::userinfo_endoint;
 use mockall::predicate::*;
 
 const ACCESS_TOKEN: &str = "test-access-token-abc";
@@ -43,10 +46,14 @@ async fn call_userinfo(
     user_db: Box<core::MockUserDatabase>,
     auth_header: Option<&str>,
 ) -> actix_web::dev::ServiceResponse {
-    dotenv::from_filename("tests/resources/.env").ok();
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/userinfo", web::get().to(userinfo_endoint)),
     )
     .await;
@@ -131,21 +138,17 @@ async fn test_userinfo_invalid_token_type() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
-    oauth_db
-        .expect_load_token_data()
-        .with(eq(ACCESS_TOKEN))
-        .times(1)
-        .returning(|_| {
-            Ok(OauthToken {
-                token: ACCESS_TOKEN.into(),
-                token_type: "id".into(),
-                client_id: "test1".into(),
-                scopes: Some("openid".into()),
-                subject: Some("user@example.com".into()),
-                expiration: None,
-                created: chrono::Utc::now().naive_utc(),
-            })
-        });
+    oauth_db.expect_load_token_data().with(eq(ACCESS_TOKEN)).times(1).returning(|_| {
+        Ok(OauthToken {
+            token: ACCESS_TOKEN.into(),
+            token_type: "id".into(),
+            client_id: "test1".into(),
+            scopes: Some("openid".into()),
+            subject: Some("user@example.com".into()),
+            expiration: None,
+            created: chrono::Utc::now().naive_utc(),
+        })
+    });
 
     let resp = call_userinfo(oauth_db, user_db, Some(&bearer(ACCESS_TOKEN))).await;
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);

@@ -23,7 +23,6 @@ extern crate openssl;
 extern crate r2d2;
 extern crate rand;
 
-pub mod config;
 pub mod core;
 pub mod db;
 pub mod idp;
