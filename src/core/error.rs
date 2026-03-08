@@ -1,20 +1,19 @@
 use actix_web::{http::StatusCode, HttpResponse, HttpResponseBuilder, ResponseError};
-use failure::Fail;
 
 /// displayable error
-#[derive(Fail, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum AppError {
-    #[fail(display = "{}", msg)]
+    #[error("{msg}")]
     ValidationError { msg: String },
-    #[fail(display = "{}", msg)]
+    #[error("{msg}")]
     InvalidAuthSession { msg: String },
-    #[fail(display = "An internal error occurred. Please try again later.")]
+    #[error("An internal error occurred. Please try again later.")]
     InternalError,
-    #[fail(display = "Not Authorized")]
+    #[error("Not Authorized")]
     Unauthorized, // TODO must set www-auth header
-    //#[fail(display = "Operation not allowed.")]
+    //#[error("Operation not allowed.")]
     //Forbidden,
-    #[fail(display = "not found")]
+    #[error("not found")]
     NotFound, // { item: String },
 }
 
@@ -49,15 +48,15 @@ impl ResponseError for AppError {
 }
 
 ///
-#[derive(Fail, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum InternalError {
-    #[fail(display = "db connection error")]
+    #[error("db connection error")]
     ConnectionError,
-    #[fail(display = "query: {}", msg)]
+    #[error("query: {msg}")]
     QueryError { msg: String },
-    #[fail(display = "not found")]
+    #[error("not found")]
     NotFound,
-    #[fail(display = "session error")]
+    #[error("session error")]
     SessionError,
 }
 
