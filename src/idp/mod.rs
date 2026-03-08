@@ -7,7 +7,8 @@ use actix_web::http::header::CONTENT_LOCATION; // header "location" is blocked b
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
 use actix_web::{HttpResponse, Result};
-use chrono::{naive::NaiveDateTime, offset::Utc, Duration};
+use chrono::DateTime;
+use chrono::{offset::Utc, Duration};
 use crypto_hash::{hex_digest, Algorithm as Hash};
 use rand::distr::Alphanumeric;
 use rand::RngExt;
@@ -81,7 +82,7 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
         .naive_utc()
         .checked_add_signed(Duration::minutes(state.config.oauth.auth_code_exp))
         .unwrap();
-    let auth_time = session.get::<i64>("auth_time").unwrap().map(|x| NaiveDateTime::from_timestamp(x, 0));
+    let auth_time = session.get::<i64>("auth_time").unwrap().map(|x| DateTime::from_timestamp(x, 0).unwrap().naive_utc());
 
     // save the code into db
     state.oauth_db.save_oauth_session(OauthSession {
@@ -130,7 +131,7 @@ pub async fn consent((scopes, state, session): (Json<Vec<String>>, Data<AppState
 
     let callback_url = generate_callback(&session, &client_id, &state, granted_scopes_as_str)?;
 
-    Ok(HttpResponse::Found().header(CONTENT_LOCATION, callback_url).finish())
+    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
 }
 
 /**
