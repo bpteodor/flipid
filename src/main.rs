@@ -12,12 +12,14 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    
+    env_logger::init();
+
     let cfg = core::config::load("config/config.yaml").expect("failed to load config/config.yaml");
 
     if let Some(log_filter) = &cfg.core.log {
         std::env::set_var("RUST_LOG", log_filter);
     }
-    env_logger::init();
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(&cfg.database.url);
