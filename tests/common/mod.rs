@@ -6,6 +6,7 @@ pub fn test_config() -> Config {
     Config {
         server: ServerConfig {
             address: "127.0.0.1".into(),
+            domain: Some("openid.local".into()),
             port: 9000,
             protocol: "http".into(),
             tls: None,
@@ -20,7 +21,7 @@ pub fn test_config() -> Config {
         },
         auth: AuthConfig {
             session_cookie: "SID".into(),
-            session_key: "123421341234123423432412341234dfsafsfasd".into(),
+            //session_key: "123421341234123423432412341234dfsafsfasd".into(),
         },
         oauth: OauthConfig {
             issuer: "https://flipid.local:9000".into(),

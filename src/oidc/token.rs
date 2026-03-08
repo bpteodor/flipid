@@ -1,6 +1,6 @@
 use crate::core;
 use crate::core::error::AppError::InternalError;
-use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState};
+use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState, basic_auth};
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
@@ -8,7 +8,6 @@ use chrono::{offset::Utc, Duration};
 use jwt::{encode, Algorithm, Header};
 use rand::distr::Alphanumeric;
 use rand::RngExt;
-use base64::prelude::*;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct TokenParams {
@@ -38,8 +37,8 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
             }
 
             let cred = req.headers().get(AUTHORIZATION).unwrap().to_str().unwrap();
-            trace!("cred: {}", cred); // TODO remove this
-            if cred != calc_auth(&client.id, &client.secret) {
+            //trace!("cred: {}", cred);
+            if cred != basic_auth(&client.id, &client.secret) {
                 info!("invalid credentials");
                 return Err(AppError::Unauthorized)?;
             }
@@ -108,18 +107,6 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     })
 }
 
-/// calculates the expected value for the "Authentication" header
-///
-/// # Examples
-/// ```ignore
-/// assert_eq!(calc_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
-/// ```
-fn calc_auth(user: &str, pass: &str) -> String {
-    let txt = format!("{}:{}", user, pass);
-    let b64 = BASE64_STANDARD.encode(txt.as_bytes());
-    trace!("received: {}", b64); // TODO remove this
-    format!("Basic {}", &b64)
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenResponse {
@@ -148,14 +135,4 @@ struct IdTokenClaims<STR: AsRef<str>> {
     //amr: Option<String>,
     //#[serde(skip_serializing_if = "Option::is_none")]
     //azp: Option<String>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calc_auth() {
-        assert_eq!(calc_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
-    }
 }
