@@ -76,7 +76,8 @@ async fn favicon(_req: HttpRequest) -> Result<fs::NamedFile> {
 
 fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorBuilder {
     log::info!("loading cert {}...", tls.cert);
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).expect(&("failed to load cert from ".to_string() + &tls.cert));
+    let mut builder =
+        SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap_or_else(|_| panic!("{}", ("failed to load cert from ".to_string() + &tls.cert)));
     builder
         .set_private_key_file(&tls.key, SslFiletype::PEM)
         .expect("failed to load server-key");

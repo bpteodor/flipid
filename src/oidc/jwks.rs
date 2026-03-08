@@ -16,9 +16,9 @@ pub async fn get_keys((_r, state): (HttpRequest, Data<AppState>)) -> Result<Http
 
     // TODO add support for multiple key (key rotation)
     let kid = "1";
-    let exponent: String = BASE64_URL_SAFE_NO_PAD.encode(&rsa.e().to_vec());
+    let exponent: String = BASE64_URL_SAFE_NO_PAD.encode(rsa.e().to_vec());
     // base64::encode_config(&rsa.e().to_vec(), base64::URL_SAFE_NO_PAD);
-    let modulus: String = BASE64_URL_SAFE_NO_PAD.encode(&rsa.n().to_vec());
+    let modulus: String = BASE64_URL_SAFE_NO_PAD.encode(rsa.n().to_vec());
 
     let keys = vec![Jwk::rsa_sig(kid, &exponent, &modulus)];
     core::send_json(StatusCode::OK, Jwks { keys })

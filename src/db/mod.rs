@@ -107,7 +107,7 @@ impl OauthDatabase for DbSqlBridge {
             .execute(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error deleting oauth session by code {}", code)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -193,7 +193,7 @@ impl OauthDatabase for DbSqlBridge {
             .load::<models::OauthToken>(&mut conn)
             .map_err(|_| InternalError::query_fail("error loading token"))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -217,7 +217,7 @@ impl UserDatabase for DbSqlBridge {
             .load::<models::User>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 
@@ -237,7 +237,7 @@ impl UserDatabase for DbSqlBridge {
             .load::<models::User>(&mut conn)
             .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
 
-        if items.len() < 1 {
+        if items.is_empty() {
             return Err(NotFound);
         }
 

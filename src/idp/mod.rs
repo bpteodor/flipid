@@ -54,7 +54,7 @@ pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Sess
     session.insert("subject", &user.id)?;
     session.insert("auth_time", Utc::now().naive_utc().and_utc().timestamp())?;
 
-    if new_scopes.len() == 0 {
+    if new_scopes.is_empty() {
         let callback_url = generate_callback(&session, &client_id, &state, scopes)?;
         Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
     } else {
@@ -91,7 +91,7 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
     state.oauth_db.save_oauth_session(OauthSession {
         auth_code: auth_code.clone(),
         client_id: client.id,
-        scopes: String::from(scopes),
+        scopes: scopes,
         nonce: session.get::<String>("nonce").unwrap_or(Option::None),
         subject: session.get::<String>("subject").unwrap().unwrap(),
         expiration: auth_code_exp,
@@ -123,11 +123,10 @@ pub async fn consent((scopes, state, session): (Json<Vec<String>>, Data<AppState
         .ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
 
     let mut granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &uid)?;
-    if scopes.len() > 0 {
+    if !scopes.is_empty() {
         state.user_db.save_granted_scopes(&uid, &client_id, &scopes)?;
         scopes.iter().for_each(|s| {
             granted_scopes.insert(s.clone());
-            ()
         });
     }
     let granted_scopes_as_str = granted_scopes.into_iter().collect::<Vec<String>>().join(" ");
