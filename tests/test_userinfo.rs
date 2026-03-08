@@ -5,9 +5,9 @@ use actix_web::web::Data;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthToken, User};
 use flipid::core::{self, AppState, Secrets};
-use std::sync::Arc;
 use flipid::oidc::userinfo::userinfo_endoint;
 use mockall::predicate::*;
+use std::sync::Arc;
 
 const ACCESS_TOKEN: &str = "test-access-token-abc";
 

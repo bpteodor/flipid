@@ -26,20 +26,33 @@ impl Secrets {
                     (bytes, key)
                 }
                 "RS256" | "RS512" => {
-                    let path = cfg.file.as_ref().ok_or_else(|| format!("secret '{}': RS256/RS512 requires 'file'", cfg.name))?;
+                    let path = cfg
+                        .file
+                        .as_ref()
+                        .ok_or_else(|| format!("secret '{}': RS256/RS512 requires 'file'", cfg.name))?;
                     let bytes = std::fs::read(path)?;
                     let key = jwt::EncodingKey::from_rsa_pem(&bytes)?;
                     (bytes, key)
                 }
                 "ES256" | "ES384" | "ES512" => {
-                    let path = cfg.file.as_ref().ok_or_else(|| format!("secret '{}': ES256/384/512 requires 'file'", cfg.name))?;
+                    let path = cfg
+                        .file
+                        .as_ref()
+                        .ok_or_else(|| format!("secret '{}': ES256/384/512 requires 'file'", cfg.name))?;
                     let bytes = std::fs::read(path)?;
                     let key = jwt::EncodingKey::from_ec_pem(&bytes)?;
                     (bytes, key)
                 }
                 scope => return Err(format!("secret '{}': unknown scope '{}'", cfg.name, scope).into()),
             };
-            map.insert(cfg.name.clone(), Secret { scope: cfg.scope.clone() , key, raw });
+            map.insert(
+                cfg.name.clone(),
+                Secret {
+                    scope: cfg.scope.clone(),
+                    key,
+                    raw,
+                },
+            );
 
             log::info!("[{:?}] loaded {:?} key from {:?}", cfg.name.clone(), cfg.scope.clone(), cfg.file.clone())
         }

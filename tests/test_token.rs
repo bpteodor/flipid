@@ -5,8 +5,8 @@ use actix_web::{test, web, web::Data, App};
 use flipid::core::models::{OauthClient, OauthSession};
 use flipid::core::{self, AppState, Secrets};
 use flipid::oidc::token::token_endpoint;
-use std::sync::Arc;
 use mockall::predicate::*;
+use std::sync::Arc;
 
 fn test_client() -> OauthClient {
     OauthClient {
@@ -79,12 +79,7 @@ async fn test_token_happy_path() {
 
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(AppState::new(
-                oauth_db,
-                user_db,
-                test_secrets(),
-                common::test_config(),
-            )))
+            .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -121,12 +116,7 @@ async fn test_token_expired_code() {
 
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(AppState::new(
-                oauth_db,
-                user_db,
-                test_secrets(),
-                common::test_config(),
-            )))
+            .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -162,12 +152,7 @@ async fn test_token_redirect_mismatch() {
 
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(AppState::new(
-                oauth_db,
-                user_db,
-                test_secrets(),
-                common::test_config(),
-            )))
+            .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -206,12 +191,7 @@ async fn test_token_invalid_credentials() {
 
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(AppState::new(
-                oauth_db,
-                user_db,
-                test_secrets(),
-                common::test_config(),
-            )))
+            .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -262,12 +242,7 @@ async fn test_token_code_not_found() {
 
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(AppState::new(
-                oauth_db,
-                user_db,
-                test_secrets(),
-                common::test_config(),
-            )))
+            .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;

@@ -1,6 +1,6 @@
 use flipid::core::{self, AppState, Secrets};
-use std::sync::Arc;
 use flipid::{db, idp, oidc};
+use std::sync::Arc;
 
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};

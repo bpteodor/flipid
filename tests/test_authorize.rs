@@ -4,9 +4,9 @@ use actix_web::http::StatusCode;
 use actix_web::{test, web, web::Data, App};
 use flipid::core::models::OauthClient;
 use flipid::core::{self, AppState, Secrets};
-use std::sync::Arc;
 use flipid::oidc::authorize;
 use mockall::predicate::*;
+use std::sync::Arc;
 
 #[actix_rt::test]
 async fn test_authorize_get_goto_login() {
@@ -53,7 +53,12 @@ async fn test_authorize_get_no_params() {
 fn mock_app_state() -> AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
-    AppState::new(oauth_db, user_db, Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")), common::test_config())
+    AppState::new(
+        oauth_db,
+        user_db,
+        Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
+        common::test_config(),
+    )
 }
 
 fn test_client1() -> OauthClient {
