@@ -82,7 +82,10 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
         .naive_utc()
         .checked_add_signed(Duration::minutes(state.config.oauth.auth_code_exp))
         .unwrap();
-    let auth_time = session.get::<i64>("auth_time").unwrap().map(|x| DateTime::from_timestamp(x, 0).unwrap().naive_utc());
+    let auth_time = session
+        .get::<i64>("auth_time")
+        .unwrap()
+        .map(|x| DateTime::from_timestamp(x, 0).unwrap().naive_utc());
 
     // save the code into db
     state.oauth_db.save_oauth_session(OauthSession {

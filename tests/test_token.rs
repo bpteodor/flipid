@@ -1,7 +1,7 @@
 mod common;
 
 use actix_web::http::StatusCode;
-use actix_web::{test, web, App};
+use actix_web::{test, web, web::Data, App};
 use flipid::core::models::{OauthClient, OauthSession};
 use flipid::core::{self, load_encryption_material, AppState};
 use flipid::oidc::token::token_endpoint;
@@ -41,10 +41,10 @@ fn expired_session(code: &str) -> OauthSession {
     }
 }
 
-fn mock_app_state() -> core::AppState {
+fn mock_app_state() -> AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
-    core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config())
+    AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config())
 }
 
 /// "test1:test1" base64-encoded
@@ -73,7 +73,12 @@ async fn test_token_happy_path() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -110,7 +115,12 @@ async fn test_token_expired_code() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -146,7 +156,12 @@ async fn test_token_redirect_mismatch() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -185,7 +200,12 @@ async fn test_token_invalid_credentials() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -204,7 +224,12 @@ async fn test_token_invalid_credentials() {
 
 #[actix_rt::test]
 async fn test_token_unsupported_grant_type() {
-    let mut app = test::init_service(App::new().data(mock_app_state()).route("/op/token", web::post().to(token_endpoint))).await;
+    let mut app = test::init_service(
+        App::new()
+            .app_data(Data::new(mock_app_state()))
+            .route("/op/token", web::post().to(token_endpoint)),
+    )
+    .await;
 
     let body = format!("grant_type=refresh_token&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()
@@ -231,7 +256,12 @@ async fn test_token_code_not_found() {
 
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/token", web::post().to(token_endpoint)),
     )
     .await;

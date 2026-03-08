@@ -12,7 +12,6 @@ use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    
     env_logger::init();
 
     let cfg = core::config::load("config/config.yaml").expect("failed to load config/config.yaml");
@@ -77,9 +76,10 @@ async fn favicon(_req: HttpRequest) -> Result<fs::NamedFile> {
 
 fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorBuilder {
     log::info!("loading cert {}...", tls.cert);
-    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls())
-        .expect(&("failed to load cert from ".to_string() + &tls.cert));
-    builder.set_private_key_file(&tls.key, SslFiletype::PEM).expect("failed to load server-key");
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).expect(&("failed to load cert from ".to_string() + &tls.cert));
+    builder
+        .set_private_key_file(&tls.key, SslFiletype::PEM)
+        .expect("failed to load server-key");
     builder.set_certificate_chain_file(&tls.cert).expect("failed to load server-cert");
     builder
 }

@@ -1,7 +1,7 @@
 mod common;
 
 use actix_web::http::StatusCode;
-use actix_web::{test, web, App};
+use actix_web::{test, web, web::Data, App};
 use flipid::core::models::OauthClient;
 use flipid::core::{self, load_encryption_material, AppState};
 use flipid::oidc::authorize;
@@ -19,7 +19,12 @@ async fn test_authorize_get_goto_login() {
 
     let mut app = test::init_service(
         App::new()
-            .data(AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/authorize", web::get().to(authorize::auth_get)),
     )
     .await;
@@ -32,7 +37,12 @@ async fn test_authorize_get_goto_login() {
 
 #[actix_rt::test]
 async fn test_authorize_get_no_params() {
-    let mut app = test::init_service(App::new().data(mock_app_state()).route("/authorize", web::get().to(authorize::auth_get))).await;
+    let mut app = test::init_service(
+        App::new()
+            .app_data(Data::new(mock_app_state()))
+            .route("/authorize", web::get().to(authorize::auth_get)),
+    )
+    .await;
 
     let req = test::TestRequest::with_uri("/authorize").to_request();
     let resp = test::call_service(&mut app, req).await;

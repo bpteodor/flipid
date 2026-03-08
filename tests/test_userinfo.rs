@@ -1,6 +1,7 @@
 mod common;
 
 use actix_web::http::StatusCode;
+use actix_web::web::Data;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthToken, User};
 use flipid::core::{self, load_encryption_material, AppState};
@@ -47,7 +48,12 @@ async fn call_userinfo(
 ) -> actix_web::dev::ServiceResponse {
     let mut app = test::init_service(
         App::new()
-            .data(core::AppState::new(oauth_db, user_db, load_encryption_material(common::TEST_RSA_PEM), common::test_config()))
+            .app_data(Data::new(AppState::new(
+                oauth_db,
+                user_db,
+                load_encryption_material(common::TEST_RSA_PEM),
+                common::test_config(),
+            )))
             .route("/op/userinfo", web::get().to(userinfo_endoint)),
     )
     .await;

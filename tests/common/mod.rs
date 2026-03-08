@@ -1,4 +1,4 @@
-use flipid::core::config::{AuthConfig, Config, CorsConfig, CoreConfig, DatabaseConfig, IdTokenConfig, OauthConfig, ServerConfig};
+use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, ServerConfig};
 
 pub const TEST_RSA_PEM: &str = "tests/resources/config/id_rsa.pem";
 

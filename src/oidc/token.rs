@@ -1,6 +1,6 @@
 use crate::core;
 use crate::core::error::AppError::InternalError;
-use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState, basic_auth};
+use crate::core::{basic_auth, error::AppError, models::OauthSession, models::OauthToken, AppState};
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
@@ -106,7 +106,6 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
         id_token,
     })
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TokenResponse {
