@@ -1,5 +1,5 @@
 info:
-  name: OIDC Discovery
+  name: Discovery
   type: http
   seq: 2
 

@@ -1,5 +1,6 @@
-use flipid::core::{self, load_encryption_material, AppState};
+use flipid::core::{self, AppState, Secrets};
 use flipid::{db, idp, oidc};
+use std::sync::Arc;
 
 use actix_files as fs;
 use actix_session::{storage::CookieSessionStore, SessionMiddleware};
@@ -7,25 +8,23 @@ use actix_web::cookie::SameSite;
 use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
+use dotenv::dotenv;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
 /// https://openid.net/specs/openid-connect-core-1_0.html#ImplementationConsiderations
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
     env_logger::init();
 
     let cfg = core::config::load("config/config.yaml").expect("failed to load config/config.yaml");
-
-    if let Some(log_filter) = &cfg.core.log {
-        std::env::set_var("RUST_LOG", log_filter);
-    }
 
     // setup db connection
     let manager = ConnectionManager::<SqliteConnection>::new(&cfg.database.url);
     let pool = r2d2::Pool::builder().build(manager).expect("Failed to create connection pool.");
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
-    let rsa_key = load_encryption_material(&cfg.oauth.id_token.rsa_key);
+    let secrets = Arc::new(Secrets::load(&cfg.secrets).expect("failed to load secrets"));
     let session_key = Key::generate(); //Key::from(cfg.auth.session_key.as_bytes());
 
     let addr = format!("{}:{}", &cfg.server.address, &cfg.server.port);
@@ -34,7 +33,7 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), rsa_key.clone(), cfg.clone())))
+            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), secrets.clone(), cfg.clone())))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors(&cfg.server.cors))
             .wrap(init_session(session_key.clone(), &cfg))
@@ -58,7 +57,7 @@ async fn main() -> std::io::Result<()> {
     log::info!("encrypted communication: {}", is_https);
 
     if !is_https {
-        log::debug!("starting on port {}...", &addr);
+        log::info!("starting on port {}...", &addr);
         srv.bind(addr)
     } else {
         log::debug!("starting with SSL on port {}...", &addr);

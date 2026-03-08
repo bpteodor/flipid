@@ -8,6 +8,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub auth: AuthConfig,
     pub oauth: OauthConfig,
+    #[serde(default)]
+    pub secrets: Vec<SecretConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -75,8 +77,15 @@ pub struct OauthConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct IdTokenConfig {
     pub signature: String,
-    pub rsa_key: String,
-    pub secret: Option<String>,
+    pub key: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SecretConfig {
+    pub name: String,
+    pub scope: String,
+    pub value: Option<String>,
+    pub file: Option<String>,
 }
 
 fn default_true() -> bool {
