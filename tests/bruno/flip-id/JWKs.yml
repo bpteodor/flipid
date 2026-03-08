@@ -1,0 +1,28 @@
+info:
+  name: JWKs
+  type: http
+  seq: 4
+
+http:
+  method: GET
+  url: "{{flipidURL}}/op/jwks"
+  auth:
+    type: oauth2
+    flow: authorization_code
+    credentials:
+      placement: body
+    pkce:
+      disabled: true
+    tokenConfig:
+      id: credentials
+      placement:
+        header: Bearer
+    settings:
+      autoFetchToken: true
+      autoRefreshToken: false
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
