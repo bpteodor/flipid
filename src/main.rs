@@ -25,7 +25,7 @@ async fn main() -> std::io::Result<()> {
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
     let secrets = Arc::new(Secrets::load(&cfg.secrets).expect("failed to load secrets"));
-    let session_key = Key::generate(); //Key::from(cfg.auth.session_key.as_bytes());
+    let session_key = Key::from(cfg.auth.session_key.as_bytes()); // Key::generate();
 
     let addr = format!("{}:{}", &cfg.server.address, &cfg.server.port);
     let is_https = cfg.server.is_https();

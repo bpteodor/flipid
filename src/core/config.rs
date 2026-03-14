@@ -62,7 +62,7 @@ pub struct DatabaseConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct AuthConfig {
     pub session_cookie: String,
-    //pub session_key: String,
+    pub session_key: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
