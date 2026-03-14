@@ -42,7 +42,7 @@ async fn main() -> std::io::Result<()> {
             .route("/favicon.ico", web::get().to(favicon))
             // openid provider
             .route("/.well-known/openid-configuration", web::get().to(oidc::discovery::openid_config))
-            .route("/.well-known/jwks", web::get().to(oidc::jwks::get_keys))
+            .route("/.well-known/jwks.json", web::get().to(oidc::jwks::get_keys))
             .route("/oauth2/authorize", web::get().to(oidc::authorize::auth_get))
             .route("/oauth2/authorize", web::post().to(oidc::authorize::auth_post))
             .route("/oauth2/token", web::post().to(oidc::token::token_endpoint))
