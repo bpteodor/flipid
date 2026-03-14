@@ -3,6 +3,7 @@ use crate::core::AppState;
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
 use actix_web::{HttpRequest, HttpResponse, Result};
+use jwt::Algorithm;
 
 /**
  * GET /.well-known/openid-connect
@@ -19,17 +20,10 @@ pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Resu
         userinfo_endpoint: Some(issuer_url.clone() + "/oauth2/userinfo"),
         jwks_uri: issuer_url.clone() + "/oauth2/jwks",
         scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
-        response_types_supported: vec!["code".into()], // TODO support more flows (at least token)
+        response_types_supported: vec!["code".into()], // TODO token?
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more
         subject_types_supported: vec!["public".into()], // TODO add pairwise too?
-        id_token_signing_alg_values_supported: vec![
-            "HS256".into(),
-            "HS386".into(),
-            "HS512".into(),
-            "RS256".into(),
-            "RS386".into(),
-            "RS512".into(),
-        ],
+        id_token_signing_alg_values_supported: state.config.oauth.id_token.available_signing.keys().cloned().collect(),
         claims_supported: Some(vec!["sub".into()]),
         acr_values_supported: Some(SUPPORTED_ACR_VALUES.to_vec()),
         ..Default::default()
@@ -63,7 +57,7 @@ pub struct OIDCProviderConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     acr_values_supported: Option<Vec<String>>, // OPTIONAL
     subject_types_supported: Vec<String>,
-    id_token_signing_alg_values_supported: Vec<String>, // RS256 must be included
+    id_token_signing_alg_values_supported: Vec<Algorithm>, // RS256 must be included
     // ...
     claims_supported: Option<Vec<String>>, // RECOMENDED, default: ["authorization_code", "implicit"]
                                            // ...
