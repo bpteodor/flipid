@@ -14,10 +14,10 @@ pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Resu
 
     let prov_config = OIDCProviderConfig {
         issuer: issuer_url.clone(),
-        authorization_endpoint: issuer_url.clone() + "/op/authorize",
-        token_endpoint: issuer_url.clone() + "/op/token",
-        userinfo_endpoint: Some(issuer_url.clone() + "/op/userinfo"),
-        jwks_uri: issuer_url.clone() + "/op/jwks",
+        authorization_endpoint: issuer_url.clone() + "/oauth2/authorize",
+        token_endpoint: issuer_url.clone() + "/oauth2/token",
+        userinfo_endpoint: Some(issuer_url.clone() + "/oauth2/userinfo"),
+        jwks_uri: issuer_url.clone() + "/oauth2/jwks",
         scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
         response_types_supported: vec!["code".into()], // TODO support more flows (at least token)
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more

@@ -80,13 +80,13 @@ async fn test_token_happy_path() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
     let body = format!("grant_type=authorization_code&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", VALID_AUTH))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
@@ -117,13 +117,13 @@ async fn test_token_expired_code() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
     let body = format!("grant_type=authorization_code&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", VALID_AUTH))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
@@ -153,7 +153,7 @@ async fn test_token_redirect_mismatch() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
@@ -162,7 +162,7 @@ async fn test_token_redirect_mismatch() {
         CODE, "http://evil.example.com/callback"
     );
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", VALID_AUTH))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
@@ -192,13 +192,13 @@ async fn test_token_invalid_credentials() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
     let body = format!("grant_type=authorization_code&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", "Basic d3Jvbmc6Y3JlZHM=")) // wrong:creds
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
@@ -213,13 +213,13 @@ async fn test_token_unsupported_grant_type() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(mock_app_state()))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
     let body = format!("grant_type=refresh_token&code={}&redirect_uri={}", CODE, REDIRECT);
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", VALID_AUTH))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
@@ -243,13 +243,13 @@ async fn test_token_code_not_found() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(oauth_db, user_db, test_secrets(), common::test_config())))
-            .route("/op/token", web::post().to(token_endpoint)),
+            .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
 
     let body = format!("grant_type=authorization_code&code=unknown-code&redirect_uri={}", REDIRECT);
     let req = test::TestRequest::post()
-        .uri("/op/token")
+        .uri("/oauth2/token")
         .insert_header(("Authorization", VALID_AUTH))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)

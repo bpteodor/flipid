@@ -21,10 +21,10 @@ The project is organized in Rust modules
  
 | Path              | Name                      | Support |
 |-------------------|---------------------------|--|
-| /op/authorize     | Authorization Endpoint    | oidc (draft) |
-| /op/token         | Token Endpoint            |  |
-| /op/userinfo      | UserInfo Endpoint         |  |
-| /op/jwks          | JWK Set                   |  |
+| /oauth2/authorize     | Authorization Endpoint    | oidc (draft) |
+| /oauth2/token         | Token Endpoint            |  |
+| /oauth2/userinfo      | UserInfo Endpoint         |  |
+| /oauth2/jwks          | JWK Set                   |  |
 | /.well-known/openid-configuration | OpenID Connect Discovery |  |
 
 ## 4. IDP
