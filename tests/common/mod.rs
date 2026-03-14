@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
-use jsonwebtoken::Algorithm;
 use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, SecretConfig, ServerConfig};
+use jsonwebtoken::Algorithm;
+use std::collections::{HashMap, HashSet};
 
 pub const TEST_RSA_PEM: &str = "tests/resources/config/id_rsa.pem";
 pub const TEST_SECRET_NAME: &str = "rsa1";

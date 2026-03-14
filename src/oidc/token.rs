@@ -73,9 +73,16 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     debug!("claims: {:?}", &claims);
 
     let signing_alg = &state.config.oauth.id_token.signing_alg;
-    let key_name = &state.config.oauth.id_token.available_signing
-        .get(signing_alg).ok_or_else(|| AppError::bad_config(format!("alg '{:?}' not configured as available for signing id_token", signing_alg)))?
-        .iter().next().ok_or_else(|| AppError::bad_config(format!("no secret configured for signing id_token with alg '{:?}'", signing_alg)))?;
+    let key_name = &state
+        .config
+        .oauth
+        .id_token
+        .available_signing
+        .get(signing_alg)
+        .ok_or_else(|| AppError::bad_config(format!("alg '{:?}' not configured as available for signing id_token", signing_alg)))?
+        .iter()
+        .next()
+        .ok_or_else(|| AppError::bad_config(format!("no secret configured for signing id_token with alg '{:?}'", signing_alg)))?;
     let secret = state.secrets.get(key_name).ok_or_else(|| {
         log::error!("id_token signing key '{}' not found in secrets", key_name);
         InternalError

@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use serde::Deserialize;
-use std::path::Path;
 use jwt::Algorithm;
+use serde::Deserialize;
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {

@@ -37,7 +37,6 @@ impl AppError {
 
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
-
         if self.status_code().as_u16() >= 500 {
             error!("{:?}", self);
         } else {
