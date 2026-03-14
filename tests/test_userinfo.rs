@@ -55,11 +55,11 @@ async fn call_userinfo(
                 Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
                 common::test_config(),
             )))
-            .route("/op/userinfo", web::get().to(userinfo_endoint)),
+            .route("/oauth2/userinfo", web::get().to(userinfo_endoint)),
     )
     .await;
 
-    let mut req = test::TestRequest::get().uri("/op/userinfo");
+    let mut req = test::TestRequest::get().uri("/oauth2/userinfo");
     if let Some(h) = auth_header {
         req = req.insert_header(("Authorization", h));
     }

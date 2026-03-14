@@ -5,12 +5,12 @@ info:
 
 http:
   method: GET
-  url: "{{flipidURL}}/op/userinfo"
+  url: "{{flipidURL}}/oauth2/userinfo"
   auth:
     type: oauth2
     flow: authorization_code
-    authorizationUrl: "{{flipidURL}}/op/authorize"
-    accessTokenUrl: "{{flipidURL}}/op/token"
+    authorizationUrl: "{{flipidURL}}/oauth2/authorize"
+    accessTokenUrl: "{{flipidURL}}/oauth2/token"
     callbackUrl: http://localhost:8080/callback
     credentials:
       clientId: test-app1

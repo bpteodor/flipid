@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{flipidURL}}/op/jwks"
+  url: "{{flipidURL}}/oauth2/jwks"
   auth:
     type: oauth2
     flow: authorization_code

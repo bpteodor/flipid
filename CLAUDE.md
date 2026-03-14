@@ -74,7 +74,7 @@ docker run --rm -ti -p 9000:9000 --name flip-id \
 - **`config.rs`**: Thin wrappers over `std::env::var` — no caching, read on every call.
 - **`core/`**: Shared abstractions. Defines `OauthDatabase` and `UserDatabase` traits (annotated with `#[cfg_attr(test, automock)]` for mockall), `AppState`, and error types.
 - **`db/`**: `DbSqlBridge` is the only concrete implementation of both database traits, backed by SQLite via Diesel ORM.
-- **`oidc/`**: OIDC protocol endpoints under `/op/`. Each file is one endpoint.
+- **`oidc/`**: OIDC protocol endpoints under `/oauth2/`. Each file is one endpoint.
 - **`idp/`**: Non-protocol IDP UI handlers under `/idp/` — login, consent, and cancel. Manages the actix session (cookie) between the authorize redirect and the code issuance.
 
 ### Key Design Patterns
@@ -84,15 +84,15 @@ docker run --rm -ti -p 9000:9000 --name flip-id \
 2. **Error Handling**: `InternalError` is used internally by DB/service code. It is converted to `AppError` via `InternalError::to_user()` before returning from handlers. `AppError` implements `ResponseError` for actix-web.
 
 3. **Session Flow**:
-   - `GET /op/authorize` stores params (client_id, scopes, nonce, redirect_uri, state) in the encrypted cookie session and renders the login page.
+   - `GET /oauth2/authorize` stores params (client_id, scopes, nonce, redirect_uri, state) in the encrypted cookie session and renders the login page.
    - `POST /idp/login` authenticates the user, writes `subject`/`auth_time` to session. If all scopes already granted, immediately issues the auth code; otherwise returns scopes needing consent.
    - `POST /idp/consent` saves newly granted scopes and issues the auth code.
-   - `POST /op/token` consumes the auth code (one-time use), validates expiry + redirect_uri + Basic auth credentials, issues a JWT id_token (RS256) and a random opaque access_token.
+   - `POST /oauth2/token` consumes the auth code (one-time use), validates expiry + redirect_uri + Basic auth credentials, issues a JWT id_token (RS256) and a random opaque access_token.
 
 4. **JWT Token Flow**:
    - RS256 — private key path configured via `OAUTH_JWT_RSA_PEM`.
    - `AppState.rsa` holds the loaded `EncodingKey`.
-   - Public keys exposed via `GET /op/jwks`.
+   - Public keys exposed via `GET /oauth2/jwks`.
 
 5. **Password Security**: Passwords are SHA256-hashed before DB lookup ([src/idp/mod.rs:34](src/idp/mod.rs#L34)).
 
