@@ -89,7 +89,8 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     })?;
     let sign_alg = state.config.oauth.id_token.signing_alg;
     let key = &secret.key;
-    let header = Header::new(sign_alg);
+    let mut header = Header::new(sign_alg);
+    header.kid = Some(key_name.to_string());
     let id_token = encode(&header, &claims, &key).map_err(|e| {
         log::error!("JWT encoding error. (alg: {:?}) (cause: {})", sign_alg, e);
         InternalError
