@@ -1,6 +1,6 @@
 use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, SecretConfig, ServerConfig};
 use jsonwebtoken::Algorithm;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub const TEST_RSA_PEM: &str = "tests/resources/config/id_rsa.pem";
 pub const TEST_SECRET_NAME: &str = "rsa1";
@@ -32,7 +32,7 @@ pub fn test_config() -> Config {
             token_exp: 3600,
             id_token: IdTokenConfig {
                 signing_alg: Algorithm::RS256,
-                available_signing: HashMap::from([(Algorithm::RS256, HashSet::from([TEST_SECRET_NAME.to_string()]))]),
+                available_signing: HashMap::from([(Algorithm::RS256, vec![TEST_SECRET_NAME.to_string()])]),
             },
         },
         secrets: vec![SecretConfig {

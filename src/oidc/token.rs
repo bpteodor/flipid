@@ -70,7 +70,6 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
                 expires_in: state.config.oauth.token_exp,
                 id_token: id_token.into(),
             })
-
         }
         // TODO add refresh_token support?
         _ => {

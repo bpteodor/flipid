@@ -1,6 +1,6 @@
 use jwt::Algorithm;
 use serde::Deserialize;
-use std::collections::{HashMap};
+use std::collections::HashMap;
 use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]

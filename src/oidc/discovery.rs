@@ -20,9 +20,9 @@ pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Resu
         userinfo_endpoint: Some(issuer_url.clone() + "/oauth2/userinfo"),
         jwks_uri: issuer_url.clone() + "/oauth2/jwks",
         scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
-        response_types_supported: vec!["code".into()], // TODO token?
+        response_types_supported: vec!["code".into()],                  // TODO token?
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more
-        subject_types_supported: vec!["public".into()], // TODO add pairwise too?
+        subject_types_supported: vec!["public".into()],                 // TODO add pairwise too?
         id_token_signing_alg_values_supported: state.config.oauth.id_token.available_signing.keys().cloned().collect(),
         claims_supported: Some(vec!["sub".into()]),
         acr_values_supported: Some(SUPPORTED_ACR_VALUES.to_vec()),
