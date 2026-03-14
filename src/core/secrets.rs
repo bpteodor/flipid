@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-
+use jwt::EncodingKey;
 use crate::core::config::SecretConfig;
 
 pub struct Secret {
     pub kind: String,
-    pub key: jwt::EncodingKey, // todo lazy load & cache
+    pub key: EncodingKey, // todo lazy load & cache
     pub raw: Vec<u8>,
 }
 
@@ -14,7 +14,7 @@ impl Secrets {
     pub fn load(configs: &[SecretConfig]) -> Result<Self, Box<dyn std::error::Error>> {
         let mut map = HashMap::new();
         for cfg in configs {
-            let bytes = if cfg.value.is_some() {
+            let raw = if cfg.value.is_some() {
                 cfg.value
                     .as_ref()
                     .ok_or_else(|| format!("secret '{}': HS256/HS512 requires 'value'", cfg.name))?
@@ -31,23 +31,15 @@ impl Secrets {
                 continue;
             };
 
-            let (raw, key) = match cfg.kind.as_str() {
-                "SECRET" => {
-                    let key = jwt::EncodingKey::from_secret(&bytes);
-                    (bytes, key)
-                }
-                "RSA" => {
-                    let key = jwt::EncodingKey::from_rsa_pem(&bytes)?;
-                    (bytes, key)
-                }
-                "EC" => {
-                    let key = jwt::EncodingKey::from_ec_pem(&bytes)?;
-                    (bytes, key)
-                }
-                "ED" => {
-                    let key = jwt::EncodingKey::from_ed_pem(&bytes)?;
-                    (bytes, key)
-                }
+            let key = match cfg.kind.as_str() {
+                "SECRET" => EncodingKey::from_secret(&raw),
+
+                "RSA" => EncodingKey::from_rsa_pem(&raw).map_err(|_| format!("invalid RSA key:{}", cfg.name))?,
+
+                "EC" => EncodingKey::from_ec_pem(&raw).map_err(|_| format!("invalid EC key:{}", cfg.name))?,
+
+                "ED" => EncodingKey::from_ed_pem(&raw).map_err(|_| format!("invalid ED key:{}", cfg.name))?,
+
                 kind => return Err(format!("secret '{}': unknown type '{}'", cfg.name, kind).into()),
             };
             map.insert(
