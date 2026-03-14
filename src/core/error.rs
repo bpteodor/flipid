@@ -4,6 +4,8 @@ use actix_web::{http::StatusCode, HttpResponse, HttpResponseBuilder, ResponseErr
 #[derive(thiserror::Error, Debug)]
 pub enum AppError {
     #[error("{msg}")]
+    ConfigurationError { msg: String },
+    #[error("{msg}")]
     ValidationError { msg: String },
     #[error("{msg}")]
     InvalidAuthSession { msg: String },
@@ -18,6 +20,11 @@ pub enum AppError {
 }
 
 impl AppError {
+    pub fn bad_config<T: AsRef<str>>(m: T) -> Self {
+        AppError::ConfigurationError {
+            msg: String::from(m.as_ref()),
+        }
+    }
     pub fn bad_req<T: AsRef<str>>(m: T) -> Self {
         AppError::ValidationError {
             msg: String::from(m.as_ref()),
@@ -30,13 +37,19 @@ impl AppError {
 
 impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
-        info!("{:?}", self);
+        if self.status_code().as_u16() >= 500 {
+            error!("{:?}", self);
+        } else {
+            info!("{:?}", self);
+        }
+
         HttpResponseBuilder::new(self.status_code())
             .content_type("text/html; charset=utf-8")
             .body(self.to_string())
     }
     fn status_code(&self) -> StatusCode {
         match self {
+            AppError::ConfigurationError { msg: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::ValidationError { msg: _ } => StatusCode::BAD_REQUEST,
             AppError::InvalidAuthSession { msg: _ } => StatusCode::BAD_REQUEST,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,

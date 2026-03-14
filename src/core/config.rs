@@ -1,4 +1,6 @@
+use jwt::Algorithm;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::path::Path;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -75,15 +77,24 @@ pub struct OauthConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct AccessTokenConfig {
+    #[serde(alias = "type")]
+    pub kind: String,
+    pub signing_alg: Option<Algorithm>,
+    pub available_signing: Option<HashMap<Algorithm, Vec<String>>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct IdTokenConfig {
-    pub signature: String,
-    pub key: String,
+    pub signing_alg: Algorithm,
+    pub available_signing: HashMap<Algorithm, Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SecretConfig {
     pub name: String,
-    pub scope: String,
+    #[serde(alias = "type")]
+    pub kind: String, // 'type' is reserved in rust
     pub value: Option<String>,
     pub file: Option<String>,
 }

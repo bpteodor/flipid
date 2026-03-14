@@ -26,7 +26,6 @@ http:
         header: Bearer
     settings:
       autoFetchToken: true
-      autoRefreshToken: false
 
 settings:
   encodeUrl: true

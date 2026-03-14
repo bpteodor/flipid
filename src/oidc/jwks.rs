@@ -15,7 +15,7 @@ pub async fn get_keys((_r, state): (HttpRequest, Data<AppState>)) -> Result<Http
     let rsa_params: Vec<(String, String, String)> = state
         .secrets
         .values()
-        .filter(|(_, s)| s.scope == "RS256" || s.scope == "RS512")
+        .filter(|(_, s)| s.kind == "RSA" /* || s.kind == "RS512"*/)
         .map(|(name, secret)| {
             let rsa = Rsa::private_key_from_pem(&secret.raw).map_err(|_| InternalError)?;
             let exponent = BASE64_URL_SAFE_NO_PAD.encode(rsa.e().to_vec());
