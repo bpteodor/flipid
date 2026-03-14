@@ -1,6 +1,6 @@
-use std::collections::HashMap;
-use jwt::EncodingKey;
 use crate::core::config::SecretConfig;
+use jwt::EncodingKey;
+use std::collections::HashMap;
 
 pub struct Secret {
     pub kind: String,
