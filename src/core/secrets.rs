@@ -44,6 +44,10 @@ impl Secrets {
                     let key = jwt::EncodingKey::from_ec_pem(&bytes)?;
                     (bytes, key)
                 }
+                "ED" => {
+                    let key = jwt::EncodingKey::from_ed_pem(&bytes)?;
+                    (bytes, key)
+                }
                 kind => return Err(format!("secret '{}': unknown type '{}'", cfg.name, kind).into()),
             };
             map.insert(
