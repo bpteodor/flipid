@@ -5,7 +5,7 @@ use actix_web::http::header::AUTHORIZATION;
 use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
 use chrono::{offset::Utc, Duration};
-use jwt::{encode, Algorithm, Header};
+use jwt::{encode, Header};
 use rand::distr::Alphanumeric;
 use rand::RngExt;
 
@@ -72,19 +72,15 @@ fn gen_id_token(state: &AppState, session: OauthSession, access_token: &str) -> 
     };
     debug!("claims: {:?}", &claims);
 
-    let key_name = &state.config.oauth.id_token.key;
+    let signing_alg = &state.config.oauth.id_token.signing_alg;
+    let key_name = &state.config.oauth.id_token.available_signing
+        .get(signing_alg).ok_or_else(|| AppError::bad_config(format!("alg '{:?}' not configured as available for signing id_token", signing_alg)))?
+        .iter().next().ok_or_else(|| AppError::bad_config(format!("no secret configured for signing id_token with alg '{:?}'", signing_alg)))?;
     let secret = state.secrets.get(key_name).ok_or_else(|| {
         log::error!("id_token signing key '{}' not found in secrets", key_name);
         InternalError
     })?;
-    let sign_alg = match state.config.oauth.id_token.signature.as_str() {
-        "HS256" => Algorithm::HS256,
-        "HS512" => Algorithm::HS512,
-        "ES256" => Algorithm::ES256,
-        "ES384" => Algorithm::ES384,
-        "RS512" => Algorithm::RS512,
-        _ => Algorithm::RS256,
-    };
+    let sign_alg = state.config.oauth.id_token.signing_alg;
     let key = &secret.key;
     let header = Header::new(sign_alg);
     let id_token = encode(&header, &claims, &key).map_err(|e| {
