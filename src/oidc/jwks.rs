@@ -1,8 +1,8 @@
 use crate::core::error::AppError::InternalError;
-use crate::core::{self, AppState};
+use crate::core::{self, AppError, AppState};
 use actix_web::http::StatusCode;
 use actix_web::web::Data;
-use actix_web::{HttpRequest, HttpResponse, Result};
+use actix_web::{App, HttpRequest, HttpResponse, ResponseError, Result};
 use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use base64::Engine;
 use openssl::rsa::Rsa;
@@ -11,6 +11,7 @@ use openssl::rsa::Rsa;
  * GET /jwks
  */
 pub async fn get_keys((_r, state): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
+
     // collect (kid, exponent, modulus) for all RSA secrets so borrows outlive the Jwk slice
     let rsa_params: Vec<(String, String, String)> = state
         .secrets
@@ -44,6 +45,7 @@ struct Jwk<'a> {
     #[serde(rename = "use")]
     _use: &'a str,
     //alg: &'a str,
+
     // RSA (https://tools.ietf.org/html/rfc3447)
     #[serde(skip_serializing_if = "Option::is_none")]
     e: Option<&'a str>, // RSA public exponent
@@ -73,6 +75,18 @@ impl<'a> Jwk<'a> {
             kid,
             e: Some(exponent),
             n: Some(modulus),
+            ..Default::default()
+        }
+    }
+
+    fn ec_sig(kid: &'a str, curveType: &'a str, x_coord: &'a str, y_coord: &'a str) -> Self {
+        Jwk::<'a> {
+            kty: "EC",
+            _use: "sig",
+            kid,
+            crv: Some(curveType),
+            x: Some(x_coord),
+            y: Some(y_coord),
             ..Default::default()
         }
     }
