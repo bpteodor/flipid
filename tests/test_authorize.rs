@@ -21,6 +21,7 @@ async fn test_authorize_get_goto_login() {
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(
+                common::test_key(),
                 oauth_db,
                 user_db,
                 Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
@@ -34,6 +35,10 @@ async fn test_authorize_get_goto_login() {
         .to_request();
     let resp = test::call_service(&mut app, req).await;
     assert_eq!(resp.status(), StatusCode::OK); // login page
+
+    // authorize must set an encrypted flip_auth session cookie
+    let set_cookie = resp.headers().get("set-cookie").expect("expected Set-Cookie header");
+    assert!(set_cookie.to_str().unwrap().starts_with("flip_auth="));
 }
 
 #[actix_rt::test]
@@ -54,6 +59,7 @@ fn mock_app_state() -> AppState {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
     AppState::new(
+        common::test_key(),
         oauth_db,
         user_db,
         Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),

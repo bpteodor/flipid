@@ -41,8 +41,7 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
     let auth_ses: AuthSessionCookie =
         serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    cookie_jar.remove(json_auth_ses);
-    //cookie_jar.private_mut(&state.cookie_jar_key).remove(json_auth_ses);
+    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
 
     // validate the user
     let pass_bytes = form.password.to_owned().into_bytes();
@@ -68,8 +67,9 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
         };
 
         let json_sso = serde_json::to_string(&sso)?;
-
-        cookie_jar.private_mut(&state.cookie_jar_key).add(Cookie::new("sso", json_sso));
+        cookie_jar.private_mut(&state.cookie_jar_key).add(
+            Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish(),
+        );
 
         let callback_url = generate_callback(&state, &auth_ses, &sso)?;
         let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();

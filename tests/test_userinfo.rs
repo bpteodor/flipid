@@ -50,6 +50,7 @@ async fn call_userinfo(
     let mut app = test::init_service(
         App::new()
             .app_data(Data::new(AppState::new(
+                common::test_key(),
                 oauth_db,
                 user_db,
                 Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
