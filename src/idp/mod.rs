@@ -87,7 +87,7 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
     }
 }
 
-fn generate_callback(state: &AppState, auth_ses: &AuthSessionCookie, sso: &SSOCookie) -> Result<String, InternalError> {
+pub fn generate_callback(state: &AppState, auth_ses: &AuthSessionCookie, sso: &SSOCookie) -> Result<String, InternalError> {
     debug!("generating success callback_uri");
 
     let client = state

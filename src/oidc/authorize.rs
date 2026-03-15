@@ -1,23 +1,23 @@
 use super::OauthError;
-use crate::core::{cookies::AuthSessionCookie, error::AppError, AppState};
+use crate::core::{cookies::{AuthSessionCookie, SSOCookie, fill_cookie_jar}, error::AppError, AppState};
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, CookieJar, Key};
 use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Form, Query};
-use actix_web::Error;
+use actix_web::{Error, HttpRequest};
 use actix_web::{HttpResponse, Responder, Result};
 use std::collections::HashSet;
 use crate::core::cookies::set_cookies_from_jar;
 
 /// GET /authorize
-pub async fn auth_get((data, state): (Query<AuthParams>, Data<AppState>)) -> impl Responder {
-    handle_auth(&data, &state)
+pub async fn auth_get((data, state, req): (Query<AuthParams>, Data<AppState>, HttpRequest)) -> impl Responder {
+    handle_auth(&data, &state, req)
 }
 
 /// POST /authorize
-pub async fn auth_post((data, state): (Form<AuthParams>, Data<AppState>)) -> impl Responder {
-    handle_auth(&data, &state)
+pub async fn auth_post((data, state, req): (Form<AuthParams>, Data<AppState>, HttpRequest)) -> impl Responder {
+    handle_auth(&data, &state, req)
 }
 
 // @see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
@@ -40,7 +40,7 @@ pub struct AuthParams {
 }
 
 // common ground
-fn handle_auth(data: &AuthParams, state: &Data<AppState>) -> Result<HttpResponse> {
+fn handle_auth(data: &AuthParams, state: &Data<AppState>, req: HttpRequest) -> Result<HttpResponse> {
     info!("auth({:?})", data);
 
     match validate_auth(data, state)? {
@@ -49,12 +49,59 @@ fn handle_auth(data: &AuthParams, state: &Data<AppState>) -> Result<HttpResponse
             Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
         }
         None => {
+            if let Some(callback_url) = try_sso(data, state, req)? {
+                return Ok(HttpResponse::Found().append_header((LOCATION, callback_url)).finish());
+            }
 
             let mut resp = state.send_page(StatusCode::OK, "login.html", tera::Context::new())?;
             create_auth_session(&state, data, &mut resp)?;
             Ok(resp)
         }
     }
+}
+
+fn try_sso(data: &AuthParams, state: &Data<AppState>, req: HttpRequest) -> Result<Option<String>, AppError> {
+    let mut cookie_jar = fill_cookie_jar(req);
+    let sso_cookie = cookie_jar.private_mut(&state.cookie_jar_key).get("sso");
+
+    let sso = match sso_cookie {
+        Some(c) => serde_json::from_str::<SSOCookie>(c.value()).ok(),
+        None => None,
+    };
+
+    let sso = match sso {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+
+    let client_id = data.client_id.as_ref().unwrap(); // already validated
+    let scopes_str = match data.scope.as_ref() {
+        Some(s) => s,
+        None => return Ok(None),
+    };
+
+    let requested_scopes: HashSet<&str> = scopes_str.split_whitespace().collect();
+    let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(client_id, &sso.subject)
+        .map_err(|e| e.to_user())?;
+
+    let all_granted = requested_scopes.iter().all(|s| granted_scopes.contains(*s));
+    if !all_granted {
+        return Ok(None);
+    }
+
+    let auth_ses = AuthSessionCookie {
+        client_id: client_id.clone(),
+        scopes: scopes_str.clone(),
+        redirect_uri: data.redirect_uri.clone().unwrap(),
+        nonce: data.nonce.clone(),
+        state: data.state.clone(),
+    };
+
+    let callback_url = crate::idp::generate_callback(state, &auth_ses, &sso)
+        .map_err(|e| e.to_user())?;
+
+    info!("SSO: reusing session for subject={}", sso.subject);
+    Ok(Some(callback_url))
 }
 
 /// validates, extracts the info & puts it on the session
