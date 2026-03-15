@@ -1,4 +1,5 @@
 pub mod config;
+pub mod cookies;
 pub mod error;
 pub mod models;
 pub mod response;

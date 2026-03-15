@@ -1,5 +1,4 @@
 extern crate actix_http;
-extern crate actix_session;
 extern crate actix_web;
 extern crate futures;
 extern crate tera;

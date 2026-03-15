@@ -1,37 +1,23 @@
 use super::OauthError;
-use crate::core::{error::AppError, AppState};
-use actix_session::Session;
+use crate::core::{cookies::AuthSessionCookie, error::AppError, AppState};
+use actix_web::cookie::time::Duration;
+use actix_web::cookie::{Cookie, CookieJar, Key};
 use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Form, Query};
 use actix_web::Error;
 use actix_web::{HttpResponse, Responder, Result};
 use std::collections::HashSet;
+use crate::core::cookies::set_cookies_from_jar;
 
 /// GET /authorize
-pub async fn auth_get((data, state, session): (Query<AuthParams>, Data<AppState>, Session)) -> impl Responder {
-    handle_auth(&data, &state, &session)
+pub async fn auth_get((data, state): (Query<AuthParams>, Data<AppState>)) -> impl Responder {
+    handle_auth(&data, &state)
 }
 
 /// POST /authorize
-pub async fn auth_post((data, state, session): (Form<AuthParams>, Data<AppState>, Session)) -> impl Responder {
-    handle_auth(&data, &state, &session)
-}
-
-// common ground
-fn handle_auth(data: &AuthParams, state: &Data<AppState>, session: &Session) -> Result<HttpResponse> {
-    info!("auth({:?})", data);
-    session.clear();
-    match validate_auth(data, state)? {
-        Some(e) => {
-            info!("Validation ERROR {:?}", &e);
-            Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
-        }
-        None => {
-            set_on_session(data, session)?;
-            state.send_page(StatusCode::OK, "login.html", tera::Context::new())
-        }
-    }
+pub async fn auth_post((data, state): (Form<AuthParams>, Data<AppState>)) -> impl Responder {
+    handle_auth(&data, &state)
 }
 
 // @see https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
@@ -51,6 +37,24 @@ pub struct AuthParams {
     pub id_token_hint: Option<String>,
     pub login_hint: Option<String>,
     pub acr_values: Option<String>,
+}
+
+// common ground
+fn handle_auth(data: &AuthParams, state: &Data<AppState>) -> Result<HttpResponse> {
+    info!("auth({:?})", data);
+
+    match validate_auth(data, state)? {
+        Some(e) => {
+            info!("Validation ERROR {:?}", &e);
+            Ok(HttpResponse::Found().append_header((LOCATION, callback_error(data, e)?)).finish())
+        }
+        None => {
+
+            let mut resp = state.send_page(StatusCode::OK, "login.html", tera::Context::new())?;
+            create_auth_session(&state, data, &mut resp)?;
+            Ok(resp)
+        }
+    }
 }
 
 /// validates, extracts the info & puts it on the session
@@ -116,17 +120,34 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
     Ok(None)
 }
 
-fn set_on_session(data: &AuthParams, session: &Session) -> Result<(), Error> {
+fn create_auth_session<'a>(state: &'a AppState, data: &'a AuthParams, resp: &mut HttpResponse) -> Result<(), Error> {
     debug!("creating auth-session for {:?}", &data.client_id);
-    session.insert("client_id", &data.client_id)?;
-    session.insert("scopes", &data.scope)?;
-    session.insert("redirect_uri", &data.redirect_uri)?;
-    if data.nonce.is_some() {
-        session.insert("nonce", data.nonce.as_ref().unwrap())?;
-    }
-    if data.state.is_some() {
-        session.insert("state", data.state.as_ref().unwrap())?;
-    }
+
+    let auth_ses = AuthSessionCookie {
+        client_id: data.client_id.clone().unwrap(),
+        scopes: data.scope.clone().unwrap(),
+        redirect_uri: data.redirect_uri.clone().unwrap(),
+        nonce: data.nonce.clone(),
+        state: data.state.clone(),
+    };
+
+    let json_auth_ses = serde_json::to_string(&auth_ses)?;
+
+    let auth_ses_cookie = Cookie::build("flip_auth", json_auth_ses)
+        //.domain("https://openid.local:9000")
+        //.domain(_state.config.server.domain.unwrap().as_str())
+        .path("/")
+        //.secure(true)
+        .http_only(true)
+        .max_age(Duration::minutes(10))
+        .finish();
+
+    let mut jar = CookieJar::new();
+
+    jar.private_mut(&state.cookie_jar_key).add(auth_ses_cookie);
+
+    set_cookies_from_jar(&jar, resp);
+
     Ok(())
 }
 

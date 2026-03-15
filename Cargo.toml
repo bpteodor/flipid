@@ -10,11 +10,11 @@ license = "Apache-2.0"
 edition = "2021"
 
 [dependencies]
-actix-web = { version = "4.9", features = ["openssl"] }
+actix-web = { version = "4.9", features = ["openssl", "secure-cookies"] }
 actix-rt = "2.10"
 actix-http = "3.9"
-actix-session = { version = "0.11", features = ["cookie-session"] }
 actix-files = "0.6"
+#cookie = {  version = "0.18", features = ["secure", "percent-encode"] }
 openssl = { version = "0.10", features = ["v110"] }
 
 tera = "1.0"  # template for the web pages (https://tera.netlify.com/docs)
