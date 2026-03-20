@@ -32,7 +32,13 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(Key::generate(),db.clone(), db.clone(), secrets.clone(), cfg.clone())))
+            .app_data(web::Data::new(AppState::new(
+                Key::generate(),
+                db.clone(),
+                db.clone(),
+                secrets.clone(),
+                cfg.clone(),
+            )))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors(&cfg.server.cors))
             //.wrap(init_session(session_key.clone(), &cfg))

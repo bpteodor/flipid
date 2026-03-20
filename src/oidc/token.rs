@@ -36,7 +36,7 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
                 return Err(AppError::bad_req("redirect_uri mismatch"))?;
             }
 
-            let cred = req.headers().get(AUTHORIZATION).ok_or_else(||AppError::Unauthorized)?.to_str().unwrap();
+            let cred = req.headers().get(AUTHORIZATION).ok_or_else(|| AppError::Unauthorized)?.to_str().unwrap();
             //trace!("cred: {}", cred);
             if cred != basic_auth(&client.id, &client.secret) {
                 info!("invalid credentials");

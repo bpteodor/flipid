@@ -4,8 +4,8 @@ use super::core::models::OauthSession;
 use super::core::AppState;
 use crate::core::cookies::{fill_cookie_jar, set_cookies_from_jar, AuthSessionCookie, SSOCookie};
 use actix_web::cookie::Cookie;
-use actix_web::http::header::CONTENT_LOCATION;
 use actix_web::cookie::{CookieJar, Key};
+use actix_web::http::header::CONTENT_LOCATION;
 // header "location" is blocked by cors
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
@@ -33,11 +33,12 @@ pub struct GrantScopesResponse {
 }
 
 pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
-
     // decode auth-session cookie first to validate the request
     let mut cookie_jar = fill_cookie_jar(req);
-    let json_auth_ses = cookie_jar.private_mut(&state.cookie_jar_key).get("flip_auth")
-        .ok_or_else(||AppError::bad_auth_session( "Auth Session not found or invalid"))?;
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get("flip_auth")
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
     let auth_ses: AuthSessionCookie =
         serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
@@ -67,9 +68,9 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
         };
 
         let json_sso = serde_json::to_string(&sso)?;
-        cookie_jar.private_mut(&state.cookie_jar_key).add(
-            Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish(),
-        );
+        cookie_jar
+            .private_mut(&state.cookie_jar_key)
+            .add(Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish());
 
         let callback_url = generate_callback(&state, &auth_ses, &sso)?;
         let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();

@@ -71,10 +71,7 @@ fn find_set_cookie(resp: &actix_web::dev::ServiceResponse, name: &str) -> Option
     })
 }
 
-fn make_app_state(
-    oauth_db: Box<core::MockOauthDatabase>,
-    user_db: Box<core::MockUserDatabase>,
-) -> AppState {
+fn make_app_state(oauth_db: Box<core::MockOauthDatabase>, user_db: Box<core::MockUserDatabase>) -> AppState {
     AppState::new(
         common::test_key(),
         oauth_db,
@@ -205,5 +202,9 @@ async fn test_login_invalid_credentials() {
         .to_request();
 
     let resp = test::call_service(&mut app, req).await;
-    assert!(resp.status().is_client_error(), "expected 4xx for invalid credentials, got {}", resp.status());
+    assert!(
+        resp.status().is_client_error(),
+        "expected 4xx for invalid credentials, got {}",
+        resp.status()
+    );
 }

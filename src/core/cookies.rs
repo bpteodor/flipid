@@ -39,7 +39,6 @@ pub fn fill_cookie_jar(req: HttpRequest) -> CookieJar {
     jar
 }
 
-
 pub fn set_cookies_from_jar(jar: &CookieJar, response: &mut HttpResponse) {
     // iterate the delta (the new/changed/removed cookies) and add to response headers
     for cookie in jar.delta() {

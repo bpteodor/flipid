@@ -1,5 +1,10 @@
 use super::OauthError;
-use crate::core::{cookies::{AuthSessionCookie, SSOCookie, fill_cookie_jar}, error::AppError, AppState};
+use crate::core::cookies::set_cookies_from_jar;
+use crate::core::{
+    cookies::{fill_cookie_jar, AuthSessionCookie, SSOCookie},
+    error::AppError,
+    AppState,
+};
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, CookieJar, Key};
 use actix_web::http::header::LOCATION;
@@ -8,7 +13,6 @@ use actix_web::web::{Data, Form, Query};
 use actix_web::{Error, HttpRequest};
 use actix_web::{HttpResponse, Responder, Result};
 use std::collections::HashSet;
-use crate::core::cookies::set_cookies_from_jar;
 
 /// GET /authorize
 pub async fn auth_get((data, state, req): (Query<AuthParams>, Data<AppState>, HttpRequest)) -> impl Responder {
@@ -81,8 +85,7 @@ fn try_sso(data: &AuthParams, state: &Data<AppState>, req: HttpRequest) -> Resul
     };
 
     let requested_scopes: HashSet<&str> = scopes_str.split_whitespace().collect();
-    let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(client_id, &sso.subject)
-        .map_err(|e| e.to_user())?;
+    let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(client_id, &sso.subject).map_err(|e| e.to_user())?;
 
     let all_granted = requested_scopes.iter().all(|s| granted_scopes.contains(*s));
     if !all_granted {
@@ -97,8 +100,7 @@ fn try_sso(data: &AuthParams, state: &Data<AppState>, req: HttpRequest) -> Resul
         state: data.state.clone(),
     };
 
-    let callback_url = crate::idp::generate_callback(state, &auth_ses, &sso)
-        .map_err(|e| e.to_user())?;
+    let callback_url = crate::idp::generate_callback(state, &auth_ses, &sso).map_err(|e| e.to_user())?;
 
     info!("SSO: reusing session for subject={}", sso.subject);
     Ok(Some(callback_url))
