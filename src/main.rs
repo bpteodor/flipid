@@ -3,7 +3,7 @@ use flipid::{db, idp, oidc};
 use std::sync::Arc;
 
 use actix_files as fs;
-use actix_web::cookie::{Key, SameSite};
+use actix_web::cookie::Key;
 use actix_web::{middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
