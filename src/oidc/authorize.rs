@@ -6,7 +6,7 @@ use crate::core::{
     AppState,
 };
 use actix_web::cookie::time::Duration;
-use actix_web::cookie::{Cookie, CookieJar, Key};
+use actix_web::cookie::{Cookie, CookieJar};
 use actix_web::http::header::LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Form, Query};

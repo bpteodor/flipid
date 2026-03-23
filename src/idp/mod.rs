@@ -1,10 +1,9 @@
 use super::core;
-use super::core::error::{AppError, InternalError, InternalError::SessionError};
+use super::core::error::{AppError, InternalError};
 use super::core::models::OauthSession;
 use super::core::AppState;
 use crate::core::cookies::{fill_cookie_jar, set_cookies_from_jar, AuthSessionCookie, SSOCookie};
 use actix_web::cookie::Cookie;
-use actix_web::cookie::{CookieJar, Key};
 use actix_web::http::header::CONTENT_LOCATION;
 // header "location" is blocked by cors
 use actix_web::http::StatusCode;
@@ -12,7 +11,6 @@ use actix_web::web::{Data, Json};
 use actix_web::{HttpRequest, HttpResponse, Result};
 use chrono::DateTime;
 use chrono::{offset::Utc, Duration};
-use diesel::CombineDsl;
 use rand::distr::Alphanumeric;
 use rand::RngExt;
 use std::collections::{HashMap, HashSet};

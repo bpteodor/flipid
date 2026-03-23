@@ -1,5 +1,5 @@
 use actix_web::cookie::CookieJar;
-use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder};
+use actix_web::{HttpRequest, HttpResponse};
 
 #[derive(Debug, Clone, Deserialize, Default, Serialize)]
 pub struct AuthSessionCookie {
