@@ -1,9 +1,16 @@
+use actix_web::cookie::Key;
 use flipid::core::config::{AuthConfig, Config, CoreConfig, CorsConfig, DatabaseConfig, IdTokenConfig, OauthConfig, SecretConfig, ServerConfig};
 use jsonwebtoken::Algorithm;
 use std::collections::HashMap;
 
 pub const TEST_RSA_PEM: &str = "tests/resources/config/id_rsa.pem";
 pub const TEST_SECRET_NAME: &str = "rsa1";
+
+/// Fixed 64-byte key used consistently across all tests so that cookies
+/// encrypted in test helpers can be decrypted by the handler under test.
+pub fn test_key() -> Key {
+    Key::from(b"test-cookie-key-for-testing-purposes-only-must-be-at-least-64-bytes!")
+}
 
 pub fn test_config() -> Config {
     Config {
@@ -23,7 +30,9 @@ pub fn test_config() -> Config {
             url: "target/test.db".into(),
         },
         auth: AuthConfig {
-            session_cookie: "SID".into(),
+            auth_session: "flip_auth".into(),
+            sso_session: "SID".into(),
+            session_key: "test-session-key".into(),
         },
         oauth: OauthConfig {
             issuer: "https://flipid.local:9000".into(),

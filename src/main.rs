@@ -3,9 +3,8 @@ use flipid::{db, idp, oidc};
 use std::sync::Arc;
 
 use actix_files as fs;
-use actix_session::{storage::CookieSessionStore, SessionMiddleware};
-use actix_web::cookie::SameSite;
-use actix_web::{cookie::Key, middleware, web, App, HttpRequest, HttpServer, Result};
+use actix_web::cookie::Key;
+use actix_web::{middleware, web, App, HttpRequest, HttpServer, Result};
 use diesel::r2d2::ConnectionManager;
 use diesel::SqliteConnection;
 use dotenv::dotenv;
@@ -25,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     let db = Box::new(db::DbSqlBridge(pool.clone()));
 
     let secrets = Arc::new(Secrets::load(&cfg.secrets).expect("failed to load secrets"));
-    let session_key = Key::generate(); //Key::from(cfg.auth.session_key.as_bytes());
+    //let session_key = Key::from(cfg.auth.session_key.as_bytes()); // Key::generate();
 
     let addr = format!("{}:{}", &cfg.server.address, &cfg.server.port);
     let is_https = cfg.server.is_https();
@@ -33,16 +32,22 @@ async fn main() -> std::io::Result<()> {
 
     let srv = HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState::new(db.clone(), db.clone(), secrets.clone(), cfg.clone())))
+            .app_data(web::Data::new(AppState::new(
+                Key::generate(),
+                db.clone(),
+                db.clone(),
+                secrets.clone(),
+                cfg.clone(),
+            )))
             .wrap(middleware::Logger::default()) // logging
             .wrap(init_cors(&cfg.server.cors))
-            .wrap(init_session(session_key.clone(), &cfg))
+            //.wrap(init_session(session_key.clone(), &cfg))
             // static resources
             .service(fs::Files::new("/s", ".").show_files_listing())
             .route("/favicon.ico", web::get().to(favicon))
             // openid provider
             .route("/.well-known/openid-configuration", web::get().to(oidc::discovery::openid_config))
-            .route("/.well-known/jwks", web::get().to(oidc::jwks::get_keys))
+            .route("/.well-known/jwks.json", web::get().to(oidc::jwks::get_keys))
             .route("/oauth2/authorize", web::get().to(oidc::authorize::auth_get))
             .route("/oauth2/authorize", web::post().to(oidc::authorize::auth_post))
             .route("/oauth2/token", web::post().to(oidc::token::token_endpoint))
@@ -84,11 +89,11 @@ fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorB
     builder
 }
 
-fn init_session(secret_key: Key, cfg: &core::config::Config) -> SessionMiddleware<CookieSessionStore> {
+/*fn init_session(secret_key: Key, cfg: &core::config::Config) -> SessionMiddleware<CookieSessionStore> {
     //log::debug!("session cookie: [{}] on {}", cfg.auth.secure_cookies, cfg.server.domain);
 
     SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
-        .cookie_name(cfg.auth.session_cookie.clone())
+        .cookie_name(cfg.auth.sso_session.clone())
         .cookie_domain(cfg.server.domain.clone())
         //.cookie_path("/") // todo configurable
         .cookie_http_only(true)
@@ -97,7 +102,7 @@ fn init_session(secret_key: Key, cfg: &core::config::Config) -> SessionMiddlewar
         .cookie_content_security(actix_session::config::CookieContentSecurity::Private)
         //.cookie_content_security(actix_session::config::CookieContentSecurity::Signed) // do not commit - INSECURE - for debug only
         .build()
-}
+}*/
 
 fn init_cors(cors: &core::config::CorsConfig) -> middleware::DefaultHeaders {
     let mut headers = middleware::DefaultHeaders::new();

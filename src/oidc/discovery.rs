@@ -11,14 +11,19 @@ use jwt::Algorithm;
  * Discovery End-Point: https://openid.net/specs/openid-connect-discovery-1_0.html
  */
 pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
-    let issuer_url = &state.config.oauth.issuer;
+    let base_url = format!(
+        "{}://{}:{}",
+        &state.config.server.protocol,
+        state.config.server.domain.as_deref().unwrap_or(&state.config.server.address),
+        &state.config.server.port
+    );
 
     let prov_config = OIDCProviderConfig {
-        issuer: issuer_url.clone(),
-        authorization_endpoint: issuer_url.clone() + "/oauth2/authorize",
-        token_endpoint: issuer_url.clone() + "/oauth2/token",
-        userinfo_endpoint: Some(issuer_url.clone() + "/oauth2/userinfo"),
-        jwks_uri: issuer_url.clone() + "/oauth2/jwks",
+        issuer: base_url.clone(),
+        authorization_endpoint: base_url.clone() + "/oauth2/authorize",
+        token_endpoint: base_url.clone() + "/oauth2/token",
+        userinfo_endpoint: Some(base_url.clone() + "/oauth2/userinfo"),
+        jwks_uri: base_url.clone() + "/.well-known/jwks.json",
         scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
         response_types_supported: vec!["code".into()],                  // TODO token?
         grant_types_supported: Some(vec!["authorization_code".into()]), // TODO impl. more

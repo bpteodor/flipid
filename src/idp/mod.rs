@@ -1,20 +1,20 @@
 use super::core;
-use super::core::error::{AppError, InternalError, InternalError::SessionError};
+use super::core::error::{AppError, InternalError};
 use super::core::models::OauthSession;
 use super::core::AppState;
-use actix_session::Session;
-use actix_web::http::header::CONTENT_LOCATION; // header "location" is blocked by cors
+use crate::core::cookies::{fill_cookie_jar, set_cookies_from_jar, AuthSessionCookie, SSOCookie};
+use actix_web::cookie::Cookie;
+use actix_web::http::header::CONTENT_LOCATION;
+// header "location" is blocked by cors
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
-use actix_web::{HttpResponse, Result};
+use actix_web::{HttpRequest, HttpResponse, Result};
 use chrono::DateTime;
 use chrono::{offset::Utc, Duration};
-use crypto_hash::{hex_digest, Algorithm as Hash};
 use rand::distr::Alphanumeric;
 use rand::RngExt;
 use std::collections::{HashMap, HashSet};
 use url::Url;
-
 /* ---------------------------------------------------------------------------------------*/
 
 #[derive(Deserialize, Debug)]
@@ -29,51 +29,78 @@ pub struct GrantScopesResponse {
     pub scopes: Vec<String>,
 }
 
-pub async fn login((form, state, session): (Json<LoginReq>, Data<AppState>, Session)) -> Result<HttpResponse> {
-    let pass_bytes = form.password.to_owned().into_bytes();
-    let pass = hex_digest(Hash::SHA256, &pass_bytes);
-    let user = state.user_db.login(&form.username, &pass)?;
+pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
+    // decode auth-session cookie first to validate the request
+    let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get(auth_session_cookie_name)
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
+    let auth_ses: AuthSessionCookie =
+        serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
+
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
+
+    // validate the user
+    let user = state.user_db.login(&form.username, &form.password)?;
     info!("user {} authenticated", &form.username);
 
-    let scopes: String = session.get::<String>("scopes")?.ok_or(AppError::bad_auth_session("no <scope>"))?; //.unwrap_or(String::new());
-    let requested_scopes: HashSet<&str> = scopes.split_whitespace().collect();
+    let requested_scopes: HashSet<&str> = auth_ses.scopes.split_whitespace().collect();
 
-    let client_id = session
-        .get::<String>("client_id")?
-        .ok_or(AppError::bad_auth_session("invalid auth-session: no <client_id>"))?;
-
-    let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &user.id)?;
+    let granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&auth_ses.client_id, &user.id)?;
     let mut new_scopes = Vec::new();
     for scope in requested_scopes {
         if !granted_scopes.contains(scope) {
             new_scopes.push(scope.to_owned());
         }
     }
-    //let ss = requested_scopes.into_iter().filter(|s| !granted_scopes.contains(s)).collect();
-
-    session.insert("subject", &user.id)?;
-    session.insert("auth_time", Utc::now().naive_utc().and_utc().timestamp())?;
 
     if new_scopes.is_empty() {
-        let callback_url = generate_callback(&session, &client_id, &state, scopes)?;
-        Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
+        let sso = SSOCookie {
+            client_id: auth_ses.client_id.clone(),
+            subject: user.id.clone(),
+            auth_time: Utc::now().naive_utc().and_utc().timestamp(),
+        };
+
+        let json_sso = serde_json::to_string(&sso)?;
+        cookie_jar
+            .private_mut(&state.cookie_jar_key)
+            .add(Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish());
+
+        let callback_url = generate_callback(&state, &auth_ses, &sso)?;
+        let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();
+        set_cookies_from_jar(&cookie_jar, &mut resp);
+
+        Ok(resp)
     } else {
-        core::send_json(
+        let auth_ses_with_subject = AuthSessionCookie {
+            subject: Some(user.id.clone()),
+            ..auth_ses
+        };
+        let json_auth_ses = serde_json::to_string(&auth_ses_with_subject)?;
+        cookie_jar
+            .private_mut(&state.cookie_jar_key)
+            .add(Cookie::build(auth_session_cookie_name.to_owned(), json_auth_ses).path("/").finish());
+
+        let mut resp = core::send_json(
             StatusCode::OK,
             GrantScopesResponse {
                 op: "GRANT".into(),
                 scopes: new_scopes,
             },
-        )
+        )?;
+        set_cookies_from_jar(&cookie_jar, &mut resp);
+        Ok(resp)
     }
 }
 
-fn generate_callback(session: &Session, client_id: &str, state: &AppState, scopes: String) -> Result<String, InternalError> {
+pub fn generate_callback(state: &AppState, auth_ses: &AuthSessionCookie, sso: &SSOCookie) -> Result<String, InternalError> {
     debug!("generating success callback_uri");
 
     let client = state
         .oauth_db
-        .fetch_client_config(client_id)
+        .fetch_client_config(auth_ses.client_id.as_ref())
         .map_err(|_| InternalError::query_fail("failed to load the client config "))?;
 
     let auth_code: String = rand::rng().sample_iter(&Alphanumeric).take(10).map(char::from).collect::<String>();
@@ -82,91 +109,98 @@ fn generate_callback(session: &Session, client_id: &str, state: &AppState, scope
         .naive_utc()
         .checked_add_signed(Duration::minutes(state.config.oauth.auth_code_exp))
         .unwrap();
-    let auth_time = session
-        .get::<i64>("auth_time")
-        .unwrap()
-        .map(|x| DateTime::from_timestamp(x, 0).unwrap().naive_utc());
+    let auth_time = DateTime::from_timestamp(sso.auth_time, 0).unwrap().naive_utc();
 
     // save the code into db
     state.oauth_db.save_oauth_session(OauthSession {
         auth_code: auth_code.clone(),
         client_id: client.id,
-        scopes,
-        nonce: session.get::<String>("nonce").unwrap_or(Option::None),
-        subject: session.get::<String>("subject").unwrap().unwrap(),
+        scopes: auth_ses.scopes.to_string(),
+        nonce: auth_ses.nonce.clone(),
+        subject: sso.subject.clone(),
         expiration: auth_code_exp,
-        auth_time,
+        auth_time: Some(auth_time),
     })?;
 
     // add the code to the callback URL and return it
     let mut params: HashMap<&str, &str> = HashMap::new();
     params.insert("code", &auth_code);
-    let state_param = session.get::<String>("state").map_err(|_| SessionError)?;
-    if state_param.is_some() {
-        params.insert("state", state_param.as_ref().unwrap());
+    if auth_ses.state.is_some() {
+        params.insert("state", auth_ses.state.as_ref().unwrap());
     }
-    let redirect_uri = session.get::<String>("redirect_uri").unwrap().unwrap();
-    let callback_url = Url::parse_with_params(&redirect_uri, params).unwrap();
+    let callback_url = Url::parse_with_params(&auth_ses.redirect_uri, params).unwrap();
     Ok(callback_url.to_string())
 }
 
-pub async fn consent((scopes, state, session): (Json<Vec<String>>, Data<AppState>, Session)) -> Result<HttpResponse> {
+pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     debug!("consented: [{:?}]", scopes);
 
-    let uid: String = session
-        .get::<String>("subject")
-        .map_err(|e| AppError::bad_req(format!("auth-session: {:?}", e)))?
-        .ok_or(AppError::bad_req("invalid auth-session: no <user-id>"))?;
-    //.ok_or(AppError::Forbidden("user-id is missing".into()))?;
-    let client_id: String = session
-        .get::<String>("client_id")?
-        .ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
+    let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get(auth_session_cookie_name)
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
+    let auth_ses: AuthSessionCookie =
+        serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    let mut granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &uid)?;
+    let uid = auth_ses
+        .subject
+        .clone()
+        .ok_or_else(|| AppError::bad_auth_session("no subject in auth-session"))?;
+
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
+
     if !scopes.is_empty() {
-        state.user_db.save_granted_scopes(&uid, &client_id, &scopes)?;
-        scopes.iter().for_each(|s| {
-            granted_scopes.insert(s.clone());
-        });
+        state.user_db.save_granted_scopes(&uid, &auth_ses.client_id, &scopes)?;
     }
-    let granted_scopes_as_str = granted_scopes.into_iter().collect::<Vec<String>>().join(" ");
 
-    let callback_url = generate_callback(&session, &client_id, &state, granted_scopes_as_str)?;
+    let sso = SSOCookie {
+        client_id: auth_ses.client_id.clone(),
+        subject: uid,
+        auth_time: Utc::now().naive_utc().and_utc().timestamp(),
+    };
+    let json_sso = serde_json::to_string(&sso)?;
+    cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .add(Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish());
 
-    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
+    let callback_url = generate_callback(&state, &auth_ses, &sso)?;
+    let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();
+    set_cookies_from_jar(&cookie_jar, &mut resp);
+    Ok(resp)
 }
 
 /**
  * when the user cancels the authentication
  */
-pub async fn cancel_login((state, session): (Data<AppState>, Session)) -> Result<HttpResponse> {
-    let client_id: String = session
-        .get::<String>("client_id")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .ok_or(AppError::bad_req("client_id is missing"))?;
-    let client = state
-        .oauth_db
-        .fetch_client_config(&client_id)
-        .map_err(|_| InternalError::query_fail("failed to load the client config"))?;
+pub async fn cancel_login((state, req): (Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
+    let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get(auth_session_cookie_name)
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
+    let auth_ses: AuthSessionCookie =
+        serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    let first_url = client.callback_url.first().ok_or(AppError::InternalError)?;
-    let callback_url: String = generate_callback_err(&session, first_url, "access_denied", "User denied access")?;
-    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish())
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
+
+    let callback_url = generate_callback_err(&auth_ses.redirect_uri, "access_denied", "User denied access", auth_ses.state.as_deref())?;
+    let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();
+    set_cookies_from_jar(&cookie_jar, &mut resp);
+    Ok(resp)
 }
 
-fn generate_callback_err(session: &Session, redirect_uri: &str, error: &str, description: &str) -> Result<String, AppError> {
+fn generate_callback_err(redirect_uri: &str, error: &str, description: &str, state: Option<&str>) -> Result<String, AppError> {
     debug!("generating error callback_uri: [{}] {}", error, description);
 
-    let state: Option<String> = session.get("state").unwrap_or(Option::None);
-
-    // add the code to the callback URL and return it
     let mut params: HashMap<&str, &str> = HashMap::new();
     params.insert("error", error);
     params.insert("error_description", description);
-    if state.is_some() {
-        params.insert("state", state.as_ref().unwrap());
+    if let Some(s) = state {
+        params.insert("state", s);
     }
     let callback_url = Url::parse_with_params(redirect_uri, params).unwrap();
-
     Ok(callback_url.to_string())
 }

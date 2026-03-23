@@ -39,6 +39,8 @@ impl ResponseError for AppError {
     fn error_response(&self) -> HttpResponse {
         if self.status_code().as_u16() >= 500 {
             error!("{:?}", self);
+        } else if self.status_code().as_u16() > 404 {
+            warn!("{:?}", self);
         } else {
             info!("{:?}", self);
         }
@@ -51,7 +53,7 @@ impl ResponseError for AppError {
         match self {
             AppError::ConfigurationError { msg: _ } => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::ValidationError { msg: _ } => StatusCode::BAD_REQUEST,
-            AppError::InvalidAuthSession { msg: _ } => StatusCode::BAD_REQUEST,
+            AppError::InvalidAuthSession { msg: _ } => StatusCode::PRECONDITION_FAILED,
             AppError::Unauthorized => StatusCode::UNAUTHORIZED,
             //AppError::Forbidden => StatusCode::FORBIDDEN,
             AppError::NotFound => StatusCode::NOT_FOUND,

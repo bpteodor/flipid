@@ -4,7 +4,7 @@ Some random stuff usefull for development.
 
 ## Configuration
 
-### 1. Cryptografic material
+### 1. Cryptographic material
 ```sh
 cd config
 
@@ -20,6 +20,14 @@ openssl pkcs8 -topk8 -nocrypt -in es384.key -out es384.pkcs8.key
 
 openssl ecparam -name secp521r1 -genkey -noout -out es512.key
 openssl pkcs8 -topk8 -nocrypt -in es512.key -out es512.pkcs8.key
+
+# Generate Ed25519 keys (EdDSA)
+openssl genpkey -algorithm ed25519 -out ed25519.key
+openssl pkcs8 -topk8 -nocrypt -in ed25519.key -out ed25519.pkcs8.key
+
+# Generate ECDSA keys (ES256K) NOT SUPPORTED
+#openssl ecparam -name secp256k1 -genkey -noout -out ec-secp256k1.key
+#openssl pkcs8 -topk8 -nocrypt -in ec-secp256k1.key -out ec-secp256k1.pkcs8.key
 
 # (optional) generate TLS cert + key for the server
 openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.cert -nodes

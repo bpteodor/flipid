@@ -1,5 +1,4 @@
 extern crate actix_http;
-extern crate actix_session;
 extern crate actix_web;
 extern crate futures;
 extern crate tera;
@@ -16,7 +15,6 @@ extern crate log;
 extern crate diesel;
 extern crate base64;
 extern crate chrono;
-extern crate crypto_hash;
 extern crate dotenv;
 extern crate jsonwebtoken as jwt;
 extern crate openssl;
