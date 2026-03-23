@@ -75,13 +75,24 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
 
         Ok(resp)
     } else {
-        core::send_json(
+        let auth_ses_with_subject = AuthSessionCookie {
+            subject: Some(user.id.clone()),
+            ..auth_ses
+        };
+        let json_auth_ses = serde_json::to_string(&auth_ses_with_subject)?;
+        cookie_jar
+            .private_mut(&state.cookie_jar_key)
+            .add(Cookie::build("flip_auth", json_auth_ses).path("/").finish());
+
+        let mut resp = core::send_json(
             StatusCode::OK,
             GrantScopesResponse {
                 op: "GRANT".into(),
                 scopes: new_scopes,
             },
-        )
+        )?;
+        set_cookies_from_jar(&cookie_jar, &mut resp);
+        Ok(resp)
     }
 }
 
@@ -125,61 +136,67 @@ pub fn generate_callback(state: &AppState, auth_ses: &AuthSessionCookie, sso: &S
 pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     debug!("consented: [{:?}]", scopes);
 
-    /*let uid: String = session
-        .get::<String>("subject")
-        .map_err(|e| AppError::bad_req(format!("auth-session: {:?}", e)))?
-        .ok_or(AppError::bad_req("invalid auth-session: no <user-id>"))?;
-    //.ok_or(AppError::Forbidden("user-id is missing".into()))?;
-    let client_id: String = session
-        .get::<String>("client_id")?
-        .ok_or(AppError::bad_req("invalid auth-session: no <client_id>"))?;
+    let mut cookie_jar = fill_cookie_jar(req);
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get("flip_auth")
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
+    let auth_ses: AuthSessionCookie =
+        serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    let mut granted_scopes: HashSet<String> = state.user_db.fetch_granted_scopes(&client_id, &uid)?;
+    let uid = auth_ses.subject.clone().ok_or_else(|| AppError::bad_auth_session("no subject in auth-session"))?;
+
+    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
+
     if !scopes.is_empty() {
-        state.user_db.save_granted_scopes(&uid, &client_id, &scopes)?;
-        scopes.iter().for_each(|s| {
-            granted_scopes.insert(s.clone());
-        });
+        state.user_db.save_granted_scopes(&uid, &auth_ses.client_id, &scopes)?;
     }
-    let granted_scopes_as_str = granted_scopes.into_iter().collect::<Vec<String>>().join(" ");
 
-    let callback_url = generate_callback(&session, &client_id, &state, granted_scopes_as_str)?;*/
+    let sso = SSOCookie {
+        client_id: auth_ses.client_id.clone(),
+        subject: uid,
+        auth_time: Utc::now().naive_utc().and_utc().timestamp(),
+    };
+    let json_sso = serde_json::to_string(&sso)?;
+    cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .add(Cookie::build("sso", json_sso).path("/").secure(true).http_only(true).finish());
 
-    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, "callback_url")).finish())
+    let callback_url = generate_callback(&state, &auth_ses, &sso)?;
+    let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();
+    set_cookies_from_jar(&cookie_jar, &mut resp);
+    Ok(resp)
 }
 
 /**
  * when the user cancels the authentication
  */
-pub async fn cancel_login((state): (Data<AppState>)) -> Result<HttpResponse> {
-    /*let client_id: String = session
-        .get::<String>("client_id")
-        .map_err(|_| AppError::bad_req("session error"))?
-        .ok_or(AppError::bad_req("client_id is missing"))?;
-    let client = state
-        .oauth_db
-        .fetch_client_config(&client_id)
-        .map_err(|_| InternalError::query_fail("failed to load the client config"))?;
+pub async fn cancel_login((state, req): (Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
+    let mut cookie_jar = fill_cookie_jar(req);
+    let json_auth_ses = cookie_jar
+        .private_mut(&state.cookie_jar_key)
+        .get("flip_auth")
+        .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
+    let auth_ses: AuthSessionCookie =
+        serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    let first_url = client.callback_url.first().ok_or(AppError::InternalError)?;
-    let callback_url: String = generate_callback_err(&session, first_url, "access_denied", "User denied access")?;*/
-    Ok(HttpResponse::Found().append_header((CONTENT_LOCATION, "callback_url")).finish())
+    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
+
+    let callback_url = generate_callback_err(&auth_ses.redirect_uri, "access_denied", "User denied access", auth_ses.state.as_deref())?;
+    let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();
+    set_cookies_from_jar(&cookie_jar, &mut resp);
+    Ok(resp)
 }
 
-fn generate_callback_err(redirect_uri: &str, error: &str, description: &str) -> Result<String, AppError> {
+fn generate_callback_err(redirect_uri: &str, error: &str, description: &str, state: Option<&str>) -> Result<String, AppError> {
     debug!("generating error callback_uri: [{}] {}", error, description);
 
-    /*let state: Option<String> = session.get("state").unwrap_or(Option::None);
-
-    // add the code to the callback URL and return it
     let mut params: HashMap<&str, &str> = HashMap::new();
     params.insert("error", error);
     params.insert("error_description", description);
-    if state.is_some() {
-        params.insert("state", state.as_ref().unwrap());
+    if let Some(s) = state {
+        params.insert("state", s);
     }
     let callback_url = Url::parse_with_params(redirect_uri, params).unwrap();
-
-    Ok(callback_url.to_string())*/
-    Ok("callback_url".into())
+    Ok(callback_url.to_string())
 }

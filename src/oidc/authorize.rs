@@ -98,6 +98,7 @@ fn try_sso(data: &AuthParams, state: &Data<AppState>, req: HttpRequest) -> Resul
         redirect_uri: data.redirect_uri.clone().unwrap(),
         nonce: data.nonce.clone(),
         state: data.state.clone(),
+        subject: None,
     };
 
     let callback_url = crate::idp::generate_callback(state, &auth_ses, &sso).map_err(|e| e.to_user())?;
@@ -178,6 +179,7 @@ fn create_auth_session<'a>(state: &'a AppState, data: &'a AuthParams, resp: &mut
         redirect_uri: data.redirect_uri.clone().unwrap(),
         nonce: data.nonce.clone(),
         state: data.state.clone(),
+        subject: None,
     };
 
     let json_auth_ses = serde_json::to_string(&auth_ses)?;

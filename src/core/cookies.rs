@@ -8,6 +8,7 @@ pub struct AuthSessionCookie {
     pub redirect_uri: String,
     pub nonce: Option<String>,
     pub state: Option<String>,
+    pub subject: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Default, Serialize)]
