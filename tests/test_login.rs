@@ -48,6 +48,7 @@ fn flip_auth_cookie_header(scopes: &str) -> String {
         redirect_uri: REDIRECT_URI.into(),
         nonce: None,
         state: None,
+        subject: None,
     };
     let json = serde_json::to_string(&auth_ses).unwrap();
     let key = common::test_key();
