@@ -184,7 +184,7 @@ fn create_auth_session<'a>(state: &'a AppState, data: &'a AuthParams, resp: &mut
 
     let json_auth_ses = serde_json::to_string(&auth_ses)?;
 
-    let auth_ses_cookie = Cookie::build(state.config.auth.auth_session_cookie.clone(), json_auth_ses)
+    let auth_ses_cookie = Cookie::build(state.config.auth.auth_session.clone(), json_auth_ses)
         //.domain("https://openid.local:9000")
         //.domain(_state.config.server.domain.unwrap().as_str())
         .path("/")

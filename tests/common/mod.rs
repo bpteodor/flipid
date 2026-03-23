@@ -30,7 +30,8 @@ pub fn test_config() -> Config {
             url: "target/test.db".into(),
         },
         auth: AuthConfig {
-            session_cookie: "SID".into(),
+            auth_session: "flip_auth".into(),
+            sso_session: "SID".into(),
             session_key: "test-session-key".into(),
         },
         oauth: OauthConfig {

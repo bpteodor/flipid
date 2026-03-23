@@ -93,7 +93,7 @@ fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorB
     //log::debug!("session cookie: [{}] on {}", cfg.auth.secure_cookies, cfg.server.domain);
 
     SessionMiddleware::builder(CookieSessionStore::default(), secret_key)
-        .cookie_name(cfg.auth.session_cookie.clone())
+        .cookie_name(cfg.auth.sso_session.clone())
         .cookie_domain(cfg.server.domain.clone())
         //.cookie_path("/") // todo configurable
         .cookie_http_only(true)

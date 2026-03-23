@@ -34,7 +34,7 @@ pub struct GrantScopesResponse {
 pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     // decode auth-session cookie first to validate the request
     let mut cookie_jar = fill_cookie_jar(req);
-    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
         .get(auth_session_cookie_name)
@@ -138,7 +138,7 @@ pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, H
     debug!("consented: [{:?}]", scopes);
 
     let mut cookie_jar = fill_cookie_jar(req);
-    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
         .get(auth_session_cookie_name)
@@ -178,7 +178,7 @@ pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, H
  */
 pub async fn cancel_login((state, req): (Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     let mut cookie_jar = fill_cookie_jar(req);
-    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
+    let auth_session_cookie_name = state.config.auth.auth_session.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
         .get(auth_session_cookie_name)
