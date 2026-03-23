@@ -68,7 +68,7 @@ CREATE TABLE granted_scopes (
 
 INSERT INTO oauth_scopes(name) VALUES('openid'), ('profile'), ('email');
 INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUES
-  ('test-app1', 'secret', 'TestApp1', '["http://localhost:8080/callback"]', 'openid profile email phone address'),
+  ('test-app1', 'secret', 'TestApp1', '["http://localhost:8080/callback","http://localhost:9009/auth/callback"]', 'openid profile email phone address'),
   ('test-app2', 'secret', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb"]', 'openid profile'),
   ('oidcdebugger', 'oidcdebugger', 'oidc Debugger', '["https://oidcdebugger.com/debug"]', 'openid profile email'),
   ('cert', 'cert123!', 'cert', '["https://op.certification.openid.net:62156/authz_cb","https://op.certification.openid.net:62156/authz_post"]', 'openid profile email'),
