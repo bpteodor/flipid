@@ -35,7 +35,7 @@ dotenv = "0.15"
 uuid = { version = "1.11", features = ["serde", "v4"] }
 
 jsonwebtoken = { version = "10.3", features = ["aws_lc_rs"] }
-crypto-hash = "0.3"
+bcrypt = "0.17"
 rand = "0.10"
 base64 = "0.22"
 

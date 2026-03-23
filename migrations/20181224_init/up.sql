@@ -78,7 +78,7 @@ INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUE
 -- pass is 'test'
 -- NOTE: THE PASSWORDS ARE HASHED
 INSERT INTO users VALUES 
-('max', '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b', 
+('max', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW', 
   'max@test.local', "+401234567", 'Max', 'Muster', 'Maxy', 'Stuttgart', '1980-04-01', 'de-DE'),
-('rik', '2bb80d537b1da3e38bd30361aa855686bde0eacd7162fef6a25fe97bf527a25b', 
+('rik', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW', 
   'erika@test.local', "+49938568", 'Erika', 'Muster', 'rik', 'Berlin', '1969-03-07', 'en-DE');

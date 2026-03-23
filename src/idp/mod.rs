@@ -12,7 +12,6 @@ use actix_web::web::{Data, Json};
 use actix_web::{HttpRequest, HttpResponse, Result};
 use chrono::DateTime;
 use chrono::{offset::Utc, Duration};
-use crypto_hash::{hex_digest, Algorithm as Hash};
 use diesel::CombineDsl;
 use rand::distr::Alphanumeric;
 use rand::RngExt;
@@ -45,9 +44,7 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
     cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
 
     // validate the user
-    let pass_bytes = form.password.to_owned().into_bytes();
-    let pass = hex_digest(Hash::SHA256, &pass_bytes);
-    let user = state.user_db.login(&form.username, &pass)?;
+    let user = state.user_db.login(&form.username, &form.password)?;
     info!("user {} authenticated", &form.username);
 
     let requested_scopes: HashSet<&str> = auth_ses.scopes.split_whitespace().collect();
