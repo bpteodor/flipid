@@ -34,14 +34,15 @@ pub struct GrantScopesResponse {
 pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     // decode auth-session cookie first to validate the request
     let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
-        .get("flip_auth")
+        .get(auth_session_cookie_name)
         .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
     let auth_ses: AuthSessionCookie =
         serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
 
     // validate the user
     let user = state.user_db.login(&form.username, &form.password)?;
@@ -82,7 +83,7 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
         let json_auth_ses = serde_json::to_string(&auth_ses_with_subject)?;
         cookie_jar
             .private_mut(&state.cookie_jar_key)
-            .add(Cookie::build("flip_auth", json_auth_ses).path("/").finish());
+            .add(Cookie::build(auth_session_cookie_name.to_owned(), json_auth_ses).path("/").finish());
 
         let mut resp = core::send_json(
             StatusCode::OK,
@@ -137,16 +138,20 @@ pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, H
     debug!("consented: [{:?}]", scopes);
 
     let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
-        .get("flip_auth")
+        .get(auth_session_cookie_name)
         .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
     let auth_ses: AuthSessionCookie =
         serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    let uid = auth_ses.subject.clone().ok_or_else(|| AppError::bad_auth_session("no subject in auth-session"))?;
+    let uid = auth_ses
+        .subject
+        .clone()
+        .ok_or_else(|| AppError::bad_auth_session("no subject in auth-session"))?;
 
-    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
 
     if !scopes.is_empty() {
         state.user_db.save_granted_scopes(&uid, &auth_ses.client_id, &scopes)?;
@@ -173,14 +178,15 @@ pub async fn consent((scopes, state, req): (Json<Vec<String>>, Data<AppState>, H
  */
 pub async fn cancel_login((state, req): (Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     let mut cookie_jar = fill_cookie_jar(req);
+    let auth_session_cookie_name = state.config.auth.auth_session_cookie.as_str();
     let json_auth_ses = cookie_jar
         .private_mut(&state.cookie_jar_key)
-        .get("flip_auth")
+        .get(auth_session_cookie_name)
         .ok_or_else(|| AppError::bad_auth_session("Auth Session not found or invalid"))?;
     let auth_ses: AuthSessionCookie =
         serde_json::from_str(&json_auth_ses.value()).map_err(|_| AppError::bad_auth_session("failed to parse auth-session"))?;
 
-    cookie_jar.remove(Cookie::build("flip_auth", "").path("/").finish());
+    cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
 
     let callback_url = generate_callback_err(&auth_ses.redirect_uri, "access_denied", "User denied access", auth_ses.state.as_deref())?;
     let mut resp = HttpResponse::Found().append_header((CONTENT_LOCATION, callback_url)).finish();

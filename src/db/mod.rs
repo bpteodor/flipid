@@ -1,8 +1,8 @@
-use bcrypt::verify as bcrypt_verify;
 use super::core::error::InternalError;
 use super::core::error::InternalError::NotFound;
 use super::core::models;
 use super::core::{OauthDatabase, UserDatabase};
+use bcrypt::verify as bcrypt_verify;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::result::Error::QueryBuilderError;
@@ -225,8 +225,7 @@ impl UserDatabase for DbSqlBridge {
         let item = items.pop().unwrap();
         // todo check prefix is {BCRYPT} and remove it
         //trace!("pass: {} trunc:{}", &item.password, &item.password[8..]);
-        let valid = bcrypt_verify(pass, &item.password[8..])
-            .map_err(|_| InternalError::query_fail("bcrypt error"))?;
+        let valid = bcrypt_verify(pass, &item.password[8..]).map_err(|_| InternalError::query_fail("bcrypt error"))?;
         if !valid {
             trace!("invalid password");
             return Err(NotFound);
