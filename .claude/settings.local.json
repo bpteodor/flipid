@@ -3,7 +3,26 @@
     "allow": [
       "Bash(cargo build:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(grep -E '\\.rs$')",
+      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Write|Edit\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' ~/dev/src/my/flipid/.claude/settings.local.json)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path // empty' | grep -qE '\\.rs$' && cd ~/dev/src/my/flipid && cargo fmt && cargo check && cargo test --features testing || true",
+            "timeout": 120,
+            "statusMessage": "Running cargo fmt, check, test..."
+          }
+        ]
+      }
     ]
   }
 }
