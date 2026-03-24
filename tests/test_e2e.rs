@@ -83,7 +83,9 @@ fn extract_code(callback_url: &str) -> String {
 /// Decodes the payload of a JWT without verifying the signature.
 fn decode_jwt_payload(token: &str) -> serde_json::Value {
     let payload_b64 = token.split('.').nth(1).expect("JWT must have 3 parts");
-    let bytes = general_purpose::URL_SAFE_NO_PAD.decode(payload_b64).expect("invalid base64 in JWT payload");
+    let bytes = general_purpose::URL_SAFE_NO_PAD
+        .decode(payload_b64)
+        .expect("invalid base64 in JWT payload");
     serde_json::from_slice(&bytes).expect("JWT payload is not valid JSON")
 }
 
@@ -164,8 +166,7 @@ async fn test_e2e_authorization_code_flow() {
     .await;
     assert_eq!(resp.status(), StatusCode::OK, "authorize should render the login page");
 
-    let flip_auth_1 = find_active_cookie(&resp, "flip_auth")
-        .expect("authorize must set flip_auth cookie");
+    let flip_auth_1 = find_active_cookie(&resp, "flip_auth").expect("authorize must set flip_auth cookie");
     let flip_auth_1 = cookie_kv(&flip_auth_1).to_string();
 
     // ── Step 2: POST /idp/login (consent required) ────────────────────────────
@@ -181,8 +182,7 @@ async fn test_e2e_authorization_code_flow() {
     .await;
     assert_eq!(resp.status(), StatusCode::OK, "login should return consent request");
 
-    let flip_auth_2 = find_active_cookie(&resp, "flip_auth")
-        .expect("login must return updated flip_auth cookie containing the subject");
+    let flip_auth_2 = find_active_cookie(&resp, "flip_auth").expect("login must return updated flip_auth cookie containing the subject");
     let flip_auth_2 = cookie_kv(&flip_auth_2).to_string();
 
     let body: serde_json::Value = test::read_body_json(resp).await;
@@ -221,10 +221,7 @@ async fn test_e2e_authorization_code_flow() {
             .uri("/oauth2/token")
             .insert_header(("Authorization", BASIC_AUTH))
             .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
-            .set_payload(format!(
-                "grant_type=authorization_code&code={}&redirect_uri={}",
-                code, REDIRECT_URI
-            ))
+            .set_payload(format!("grant_type=authorization_code&code={}&redirect_uri={}", code, REDIRECT_URI))
             .to_request(),
     )
     .await;
@@ -241,8 +238,14 @@ async fn test_e2e_authorization_code_flow() {
     let claims = decode_jwt_payload(&id_token);
     assert_eq!(claims["sub"], USERNAME, "id_token sub must match the authenticated user");
     assert_eq!(claims["aud"], CLIENT_ID, "id_token aud must match the client");
-    assert_eq!(claims["iss"], "https://flipid.local:9000", "id_token iss must match the configured issuer");
-    assert_eq!(claims["nonce"], NONCE, "id_token nonce must echo back the nonce from the authorize request");
+    assert_eq!(
+        claims["iss"], "https://flipid.local:9000",
+        "id_token iss must match the configured issuer"
+    );
+    assert_eq!(
+        claims["nonce"], NONCE,
+        "id_token nonce must echo back the nonce from the authorize request"
+    );
 
     // ── Step 5: GET /oauth2/userinfo ──────────────────────────────────────────
     let resp = test::call_service(
@@ -258,5 +261,8 @@ async fn test_e2e_authorization_code_flow() {
     let userinfo: serde_json::Value = test::read_body_json(resp).await;
     assert_eq!(userinfo["sub"], USERNAME);
     assert_eq!(userinfo["email"], USERNAME);
-    assert!(userinfo.get("given_name").is_none(), "profile scope not requested — given_name must be absent");
+    assert!(
+        userinfo.get("given_name").is_none(),
+        "profile scope not requested — given_name must be absent"
+    );
 }
