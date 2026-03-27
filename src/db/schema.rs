@@ -19,13 +19,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    oauth_scopes (name) {
-        name -> Text,
-        description -> Nullable<Text>,
-    }
-}
-
-diesel::table! {
     oauth_sessions (auth_code) {
         auth_code -> Text,
         client_id -> Text,
@@ -65,7 +58,6 @@ diesel::table! {
 }
 
 diesel::joinable!(granted_scopes -> oauth_clients (client_id));
-diesel::joinable!(granted_scopes -> oauth_scopes (scope));
 diesel::joinable!(oauth_tokens -> oauth_clients (client_id));
 
-diesel::allow_tables_to_appear_in_same_query!(granted_scopes, oauth_clients, oauth_scopes, oauth_sessions, oauth_tokens, users,);
+diesel::allow_tables_to_appear_in_same_query!(granted_scopes, oauth_clients, oauth_sessions, oauth_tokens, users,);

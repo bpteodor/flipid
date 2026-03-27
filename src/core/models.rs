@@ -1,4 +1,4 @@
-use super::super::db::schema::{oauth_scopes, oauth_sessions, oauth_tokens, users};
+use super::super::db::schema::{oauth_sessions, oauth_tokens, users};
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
@@ -14,13 +14,6 @@ pub struct OauthClient {
     pub callback_url: Vec<String>,
     // the (space separated) scopes allowed for the client to request
     pub allowed_scopes: String,
-}
-
-#[derive(Serialize, Queryable, Insertable)]
-#[diesel(table_name = oauth_scopes)]
-pub struct OauthScope {
-    pub name: String,
-    pub description: String,
 }
 
 #[derive(Debug, Clone, Insertable, Queryable)]
