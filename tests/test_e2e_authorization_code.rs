@@ -40,9 +40,10 @@ fn test_user() -> User {
 }
 
 fn test_client() -> OauthClient {
+    let hash = bcrypt::hash(CLIENT_SECRET, 4).unwrap();
     OauthClient {
         id: CLIENT_ID.into(),
-        secret: CLIENT_SECRET.into(),
+        secret: format!("{{BCRYPT}}{}", hash),
         name: "Test App".into(),
         callback_url: vec![REDIRECT_URI.into()],
         allowed_scopes: "openid email profile".into(),
@@ -94,8 +95,8 @@ async fn test_e2e_authorization_code_flow() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let mut user_db = Box::new(core::MockUserDatabase::new());
 
-    // authorize (validate_auth) + consent (generate_callback) + token = 3 calls
-    oauth_db.expect_fetch_client_config().times(3).returning(|_| Ok(test_client()));
+    // authorize (validate_auth) + consent (generate_callback) + token (validate_credentials + redirect_uri check) = 4 calls
+    oauth_db.expect_fetch_client_config().times(4).returning(|_| Ok(test_client()));
 
     user_db.expect_fetch_user_by_id().times(1).returning(|_| {
         let hash = bcrypt::hash("pass", 4).unwrap();

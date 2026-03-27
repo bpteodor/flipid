@@ -9,9 +9,10 @@ use mockall::predicate::*;
 use std::sync::Arc;
 
 fn test_client() -> OauthClient {
+    let hash = bcrypt::hash("test1", 4).unwrap();
     OauthClient {
         id: "test1".into(),
-        secret: "test1".into(),
+        secret: format!("{{BCRYPT}}{}", hash),
         name: "Test1".into(),
         callback_url: vec!["http://localhost:8080/callback".into()],
         allowed_scopes: "openid profile email phone address".into(),
@@ -47,12 +48,6 @@ fn test_secrets() -> Arc<Secrets> {
     Arc::new(Secrets::load(&cfg.secrets).expect("failed to load test secrets"))
 }
 
-fn mock_app_state() -> AppState {
-    let oauth_db = Box::new(core::MockOauthDatabase::new());
-    let user_db = Box::new(core::MockUserDatabase::new());
-    AppState::new(common::test_key(), oauth_db, user_db, test_secrets(), common::test_config())
-}
-
 /// "test1:test1" base64-encoded
 const VALID_AUTH: &str = "Basic dGVzdDE6dGVzdDE=";
 const CODE: &str = "test-auth-code-123";
@@ -63,17 +58,18 @@ async fn test_token_happy_path() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
+    // called twice: once for credential validation, once for redirect_uri check
+    oauth_db
+        .expect_fetch_client_config()
+        .with(eq("test1"))
+        .times(2)
+        .returning(|_| Ok(test_client()));
+
     oauth_db
         .expect_consume_oauth_session_by_code()
         .with(eq(CODE))
         .times(1)
         .returning(|c| Ok(future_session(c)));
-
-    oauth_db
-        .expect_fetch_client_config()
-        .with(eq("test1"))
-        .times(1)
-        .returning(|_| Ok(test_client()));
 
     oauth_db.expect_save_oauth_token().times(1).returning(|_| Ok(()));
 
@@ -113,6 +109,13 @@ async fn test_token_happy_path() {
 async fn test_token_expired_code() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
+
+    // credential validation only; redirect check is never reached
+    oauth_db
+        .expect_fetch_client_config()
+        .with(eq("test1"))
+        .times(1)
+        .returning(|_| Ok(test_client()));
 
     oauth_db
         .expect_consume_oauth_session_by_code()
@@ -156,10 +159,11 @@ async fn test_token_redirect_mismatch() {
         .times(1)
         .returning(|c| Ok(future_session(c)));
 
+    // called twice: once for credential validation, once for redirect_uri check
     oauth_db
         .expect_fetch_client_config()
         .with(eq("test1"))
-        .times(1)
+        .times(2)
         .returning(|_| Ok(test_client()));
 
     let mut app = test::init_service(
@@ -195,12 +199,7 @@ async fn test_token_invalid_credentials() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
 
-    oauth_db
-        .expect_consume_oauth_session_by_code()
-        .with(eq(CODE))
-        .times(1)
-        .returning(|c| Ok(future_session(c)));
-
+    // credential check fetches client, then verify_password fails → 401
     oauth_db
         .expect_fetch_client_config()
         .with(eq("test1"))
@@ -221,9 +220,11 @@ async fn test_token_invalid_credentials() {
     .await;
 
     let body = format!("grant_type=authorization_code&code={}&redirect_uri={}", CODE, REDIRECT);
+    // correct client_id, wrong password
+    let wrong_auth = flipid::core::basic_auth("test1", "wrong-password");
     let req = test::TestRequest::post()
         .uri("/oauth2/token")
-        .insert_header(("Authorization", "Basic d3Jvbmc6Y3JlZHM=")) // wrong:creds
+        .insert_header(("Authorization", wrong_auth))
         .insert_header(("Content-Type", "application/x-www-form-urlencoded"))
         .set_payload(body)
         .to_request();
@@ -234,9 +235,25 @@ async fn test_token_invalid_credentials() {
 
 #[actix_rt::test]
 async fn test_token_unsupported_grant_type() {
+    let mut oauth_db = Box::new(core::MockOauthDatabase::new());
+    let user_db = Box::new(core::MockUserDatabase::new());
+
+    // credential validation only; grant type is rejected before any code lookup
+    oauth_db
+        .expect_fetch_client_config()
+        .with(eq("test1"))
+        .times(1)
+        .returning(|_| Ok(test_client()));
+
     let mut app = test::init_service(
         App::new()
-            .app_data(Data::new(mock_app_state()))
+            .app_data(Data::new(AppState::new(
+                common::test_key(),
+                oauth_db,
+                user_db,
+                test_secrets(),
+                common::test_config(),
+            )))
             .route("/oauth2/token", web::post().to(token_endpoint)),
     )
     .await;
@@ -257,6 +274,13 @@ async fn test_token_unsupported_grant_type() {
 async fn test_token_code_not_found() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let user_db = Box::new(core::MockUserDatabase::new());
+
+    // credential validation only; code lookup fails before redirect check
+    oauth_db
+        .expect_fetch_client_config()
+        .with(eq("test1"))
+        .times(1)
+        .returning(|_| Ok(test_client()));
 
     oauth_db
         .expect_consume_oauth_session_by_code()
