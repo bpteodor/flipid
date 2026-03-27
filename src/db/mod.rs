@@ -219,7 +219,7 @@ impl UserDatabase for DbSqlBridge {
             return Err(NotFound);
         }
 
-        let item = items.pop().unwrap();
+        let item = items.pop().ok_or(NotFound)?;
         debug!("user({}) = {:?}", uid, &item);
         Ok(item)
     }
