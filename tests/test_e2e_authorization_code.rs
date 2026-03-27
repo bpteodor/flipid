@@ -11,7 +11,7 @@ use flipid::core::{self, AppState, Secrets};
 use flipid::idp::{consent, login};
 use flipid::oidc::authorize::auth_get;
 use flipid::oidc::token::token_endpoint;
-use flipid::oidc::userinfo::userinfo_endoint;
+use flipid::oidc::userinfo::userinfo_endpoint;
 use std::collections::HashSet;
 use std::sync::Arc;
 use url::Url;
@@ -147,7 +147,7 @@ async fn test_e2e_authorization_code_flow() {
             .route("/idp/login", web::post().to(login))
             .route("/idp/consent", web::post().to(consent))
             .route("/oauth2/token", web::post().to(token_endpoint))
-            .route("/oauth2/userinfo", web::get().to(userinfo_endoint)),
+            .route("/oauth2/userinfo", web::get().to(userinfo_endpoint)),
     )
     .await;
 

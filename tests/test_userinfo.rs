@@ -5,7 +5,7 @@ use actix_web::web::Data;
 use actix_web::{test, web, App};
 use flipid::core::models::{OauthToken, User};
 use flipid::core::{self, AppState, Secrets};
-use flipid::oidc::userinfo::userinfo_endoint;
+use flipid::oidc::userinfo::userinfo_endpoint;
 use mockall::predicate::*;
 use std::sync::Arc;
 
@@ -56,7 +56,7 @@ async fn call_userinfo(
                 Arc::new(Secrets::load(&common::test_config().secrets).expect("test secrets")),
                 common::test_config(),
             )))
-            .route("/oauth2/userinfo", web::get().to(userinfo_endoint)),
+            .route("/oauth2/userinfo", web::get().to(userinfo_endpoint)),
     )
     .await;
 
