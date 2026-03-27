@@ -79,7 +79,7 @@ async fn test_userinfo_happy_path() {
         .returning(|_| Ok(token_with_scopes("openid profile email")));
 
     user_db
-        .expect_fetch_user()
+        .expect_fetch_user_by_id()
         .with(eq("user@example.com"))
         .times(1)
         .returning(|_| Ok(test_user()));
@@ -109,7 +109,7 @@ async fn test_userinfo_all_scopes() {
         .returning(|_| Ok(token_with_scopes("openid profile email phone address")));
 
     user_db
-        .expect_fetch_user()
+        .expect_fetch_user_by_id()
         .with(eq("user@example.com"))
         .times(1)
         .returning(|_| Ok(test_user()));

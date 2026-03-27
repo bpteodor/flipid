@@ -97,7 +97,21 @@ async fn test_e2e_authorization_code_flow() {
     // authorize (validate_auth) + consent (generate_callback) + token = 3 calls
     oauth_db.expect_fetch_client_config().times(3).returning(|_| Ok(test_client()));
 
-    user_db.expect_login().times(1).returning(|_, _| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| {
+        let hash = bcrypt::hash("pass", 4).unwrap();
+        Ok(User {
+            id: USERNAME.into(),
+            password: format!("{{BCRYPT}}{}", hash),
+            email: Some(USERNAME.into()),
+            phone: None,
+            given_name: "Test".into(),
+            family_name: "User".into(),
+            preferred_display_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+        })
+    });
 
     // No scopes granted yet — drives through the full consent step
     user_db.expect_fetch_granted_scopes().times(1).returning(|_, _| Ok(HashSet::new()));
@@ -132,7 +146,7 @@ async fn test_e2e_authorization_code_flow() {
         })
     });
 
-    user_db.expect_fetch_user().times(1).returning(|_| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| Ok(test_user()));
 
     let mut app = test::init_service(
         App::new()
