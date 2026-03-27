@@ -38,7 +38,7 @@ pub async fn userinfo_endpoint((req, ctx): (HttpRequest, Data<AppState>)) -> Res
     }
     let subject = data.subject.unwrap();
 
-    let user = ctx.user_db.fetch_user(&subject)?;
+    let user = ctx.user_db.fetch_user_by_id(&subject)?;
 
     let mut user_info = UserInfoClaims::new(&subject);
     if granted_scopes.contains("email") && user.email.is_some() {
