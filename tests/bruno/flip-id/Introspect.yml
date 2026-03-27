@@ -4,29 +4,20 @@ info:
   seq: 1
 
 http:
-  method: GET
-  url: "{{flipidURL}}/oauth2/introspect"
+  method: POST
+  url: "{{flipidURL}}/oauth2/token_info"
+  body:
+    type: form-urlencoded
+    data:
+      - name: token
+        value: "{{$oauth2.token-app1.access_token}}"
+      - name: token_type_hint
+        value: access_token
+        disabled: true
   auth:
-    type: oauth2
-    flow: authorization_code
-    authorizationUrl: "{{flipidURL}}/oauth2/authorize"
-    accessTokenUrl: "{{flipidURL}}/oauth2/token"
-    callbackUrl: http://localhost:8080/callback
-    credentials:
-      clientId: test-app1
-      clientSecret: secret
-      placement: basic_auth_header
-    scope: openid profile email phone address
-    state: sdfsdf
-    pkce:
-      disabled: true
-    tokenConfig:
-      id: token-app1
-      placement:
-        header: Bearer
-    settings:
-      autoFetchToken: true
-      autoRefreshToken: false
+    type: basic
+    username: test-app1
+    password: secret
 
 settings:
   encodeUrl: true

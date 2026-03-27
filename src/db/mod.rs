@@ -2,7 +2,6 @@ use super::core::error::InternalError;
 use super::core::error::InternalError::NotFound;
 use super::core::models;
 use super::core::{OauthDatabase, UserDatabase};
-use bcrypt::verify as bcrypt_verify;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::result::Error::QueryBuilderError;
@@ -205,37 +204,7 @@ impl OauthDatabase for DbSqlBridge {
 }
 
 impl UserDatabase for DbSqlBridge {
-    fn login(&self, uid: &str, pass: &str) -> Result<models::User, InternalError> {
-        use self::schema::users::dsl::*;
-        debug!("login(user: '{}')...", uid);
-        trace!("pass: {}", pass); // delete this
-
-        let mut conn = get_connection(self)?;
-
-        let mut items = users
-            .filter(id.eq(uid))
-            .load::<models::User>(&mut conn)
-            .map_err(|_| InternalError::query_fail(&format!("error loading user {}", uid)))?;
-
-        if items.is_empty() {
-            trace!("user not found");
-            return Err(NotFound);
-        }
-
-        let item = items.pop().unwrap();
-        // todo check prefix is {BCRYPT} and remove it
-        //trace!("pass: {} trunc:{}", &item.password, &item.password[8..]);
-        let valid = bcrypt_verify(pass, &item.password[8..]).map_err(|_| InternalError::query_fail("bcrypt error"))?;
-        if !valid {
-            trace!("invalid password");
-            return Err(NotFound);
-        }
-
-        trace!("user({}) = {:?}", uid, &item);
-        Ok(item)
-    }
-
-    fn fetch_user(&self, uid: &str) -> Result<models::User, InternalError> {
+    fn fetch_user_by_id(&self, uid: &str) -> Result<models::User, InternalError> {
         use self::schema::users::dsl::*;
         trace!("login({})...", uid);
 
@@ -250,7 +219,7 @@ impl UserDatabase for DbSqlBridge {
             return Err(NotFound);
         }
 
-        let item = items.pop().unwrap();
+        let item = items.pop().ok_or(NotFound)?;
         debug!("user({}) = {:?}", uid, &item);
         Ok(item)
     }

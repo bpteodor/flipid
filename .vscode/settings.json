@@ -1,3 +1,4 @@
 {
-    "diffEditor.codeLens": true
+    "diffEditor.codeLens": true,
+    "rust-analyzer.cargo.features": ["testing"]
 }

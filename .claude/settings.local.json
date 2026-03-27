@@ -7,7 +7,8 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(grep -E '\\.rs$')",
-      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Write|Edit\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' ~/dev/src/my/flipid/.claude/settings.local.json)"
+      "Bash(jq -e '.hooks.PostToolUse[] | select\\(.matcher == \"\"Write|Edit\"\"\\) | .hooks[] | select\\(.type == \"\"command\"\"\\) | .command' ~/dev/src/my/flipid/.claude/settings.local.json)",
+      "Bash(grep -E \"^test |FAILED|ok$|result:\")"
     ]
   },
   "hooks": {

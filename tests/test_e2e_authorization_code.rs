@@ -11,7 +11,7 @@ use flipid::core::{self, AppState, Secrets};
 use flipid::idp::{consent, login};
 use flipid::oidc::authorize::auth_get;
 use flipid::oidc::token::token_endpoint;
-use flipid::oidc::userinfo::userinfo_endoint;
+use flipid::oidc::userinfo::userinfo_endpoint;
 use std::collections::HashSet;
 use std::sync::Arc;
 use url::Url;
@@ -40,9 +40,10 @@ fn test_user() -> User {
 }
 
 fn test_client() -> OauthClient {
+    let hash = bcrypt::hash(CLIENT_SECRET, 4).unwrap();
     OauthClient {
         id: CLIENT_ID.into(),
-        secret: CLIENT_SECRET.into(),
+        secret: format!("{{BCRYPT}}{}", hash),
         name: "Test App".into(),
         callback_url: vec![REDIRECT_URI.into()],
         allowed_scopes: "openid email profile".into(),
@@ -94,10 +95,24 @@ async fn test_e2e_authorization_code_flow() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let mut user_db = Box::new(core::MockUserDatabase::new());
 
-    // authorize (validate_auth) + consent (generate_callback) + token = 3 calls
-    oauth_db.expect_fetch_client_config().times(3).returning(|_| Ok(test_client()));
+    // authorize (validate_auth) + consent (generate_callback) + token (validate_credentials + redirect_uri check) = 4 calls
+    oauth_db.expect_fetch_client_config().times(4).returning(|_| Ok(test_client()));
 
-    user_db.expect_login().times(1).returning(|_, _| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| {
+        let hash = bcrypt::hash("pass", 4).unwrap();
+        Ok(User {
+            id: USERNAME.into(),
+            password: format!("{{BCRYPT}}{}", hash),
+            email: Some(USERNAME.into()),
+            phone: None,
+            given_name: "Test".into(),
+            family_name: "User".into(),
+            preferred_display_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+        })
+    });
 
     // No scopes granted yet — drives through the full consent step
     user_db.expect_fetch_granted_scopes().times(1).returning(|_, _| Ok(HashSet::new()));
@@ -132,7 +147,7 @@ async fn test_e2e_authorization_code_flow() {
         })
     });
 
-    user_db.expect_fetch_user().times(1).returning(|_| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| Ok(test_user()));
 
     let mut app = test::init_service(
         App::new()
@@ -147,7 +162,7 @@ async fn test_e2e_authorization_code_flow() {
             .route("/idp/login", web::post().to(login))
             .route("/idp/consent", web::post().to(consent))
             .route("/oauth2/token", web::post().to(token_endpoint))
-            .route("/oauth2/userinfo", web::get().to(userinfo_endoint)),
+            .route("/oauth2/userinfo", web::get().to(userinfo_endpoint)),
     )
     .await;
 

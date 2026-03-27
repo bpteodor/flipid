@@ -3,9 +3,9 @@ use super::core::error::{AppError, InternalError};
 use super::core::models::OauthSession;
 use super::core::AppState;
 use crate::core::cookies::{fill_cookie_jar, set_cookies_from_jar, AuthSessionCookie, SSOCookie};
+use crate::core::secrets::verify_password;
 use actix_web::cookie::Cookie;
 use actix_web::http::header::CONTENT_LOCATION;
-// header "location" is blocked by cors
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
 use actix_web::{HttpRequest, HttpResponse, Result};
@@ -43,8 +43,14 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
     cookie_jar.remove(Cookie::build(auth_session_cookie_name.to_owned(), "").path("/").finish());
 
     // validate the user
-    let user = state.user_db.login(&form.username, &form.password)?;
-    info!("user {} authenticated", &form.username);
+    //let user = state.user_db.login(&form.username, &form.password)?;
+    let user = state.user_db.fetch_user_by_id(&form.username)?;
+    debug!("user {} loaded", &form.username);
+    verify_password(&user.password, &form.password).map_err(|e| {
+        info!("failed to verify password: {}", e);
+        AppError::Unauthorized
+    })?;
+    info!("user password validated");
 
     let requested_scopes: HashSet<&str> = auth_ses.scopes.split_whitespace().collect();
 

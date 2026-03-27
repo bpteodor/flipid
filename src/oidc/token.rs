@@ -1,7 +1,7 @@
 use crate::core;
 use crate::core::error::AppError::InternalError;
-use crate::core::{basic_auth, error::AppError, models::OauthSession, models::OauthToken, AppState};
-use actix_web::http::header::AUTHORIZATION;
+use crate::core::{error::AppError, models::OauthSession, models::OauthToken, AppState};
+use crate::oidc::common::validate_client_credentials;
 use actix_web::web::{Data, Form};
 use actix_web::{http::StatusCode, HttpRequest, HttpResponse, Result};
 use chrono::{offset::Utc, Duration};
@@ -21,6 +21,15 @@ pub struct TokenParams {
 /// [Specifications](https://openid.net/specs/openid-connect-core-1_0.html#TokenEndpoint)
 pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppState>, HttpRequest)) -> Result<HttpResponse> {
     debug!("form: [{:?}]", data);
+
+    match validate_client_credentials(&req, &state) {
+        Ok(_) => debug!("introspect: valid credentials"),
+        Err(e) => {
+            error!("introspect: invalid client credentials: {}", e);
+            Err(AppError::Unauthorized)?
+        }
+    }
+
     match data.grant_type.to_lowercase().as_ref() {
         "authorization_code" => {
             let session = state.oauth_db.consume_oauth_session_by_code(&data.code)?;
@@ -36,18 +45,19 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
                 return Err(AppError::bad_req("redirect_uri mismatch"))?;
             }
 
-            let cred = req.headers().get(AUTHORIZATION).ok_or_else(|| AppError::Unauthorized)?.to_str().unwrap();
-            //trace!("cred: {}", cred);
-            if cred != basic_auth(&client.id, &client.secret) {
-                info!("invalid credentials");
-                return Err(AppError::Unauthorized)?;
-            }
             debug!("exchange_auth_code({},{}) = ok", data.grant_type, data.code);
 
             // todo add JWT support for access_token
             let access_token: String = rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect::<String>();
 
-            let id_token = build_id_token(&state, &session)?;
+            // todo fix scope check
+            let id_token = if session.scopes.contains("openid") {
+                Some(build_id_token(&state, &session)?)
+            } else {
+                None
+            };
+
+            // todo refresh token on "offline_access" scope
 
             // save access_token to db
             state
@@ -128,7 +138,7 @@ pub struct TokenResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<String>,
     expires_in: i64,
-    id_token: String,
+    id_token: Option<String>, // only if 'openid' scope is requested
 }
 
 #[derive(Debug, Serialize, Deserialize)]

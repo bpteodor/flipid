@@ -147,10 +147,6 @@ fn validate_auth(data: &AuthParams, state: &AppState) -> Result<Option<OauthErro
     if data.scope.is_some() {
         let scope_param = data.scope.as_ref().unwrap();
         let scopes: HashSet<&str> = scope_param.split_whitespace().collect();
-        if !scopes.contains("openid") {
-            // we only support oidc atm
-            return Ok(Some(OauthError::new("invalid_request", "scope expected")));
-        }
 
         // only client configured scopes are allowed
         let client_scopes: HashSet<&str> = client.allowed_scopes.split_whitespace().collect();

@@ -16,8 +16,7 @@ pub trait OauthDatabase {
 
 #[cfg_attr(any(test, feature = "testing"), automock)]
 pub trait UserDatabase {
-    fn login(&self, mail: &str, pass: &str) -> Result<models::User, InternalError>;
-    fn fetch_user(&self, mail: &str) -> Result<models::User, InternalError>;
+    fn fetch_user_by_id(&self, mail: &str) -> Result<models::User, InternalError>;
     fn fetch_granted_scopes(&self, cid: &str, uid: &str) -> Result<HashSet<String>, InternalError>;
     fn save_granted_scopes(&self, uid: &str, cid: &str, scopes: &Vec<String>) -> Result<(), InternalError>;
 }

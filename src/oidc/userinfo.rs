@@ -7,7 +7,7 @@ use actix_web::{HttpRequest, HttpResponse, HttpResponseBuilder, Result};
 ///GET /userinfo
 ///
 /// https://openid.net/specs/openid-connect-core-1_0.html#UserInfo
-pub async fn userinfo_endoint((req, ctx): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
+pub async fn userinfo_endpoint((req, ctx): (HttpRequest, Data<AppState>)) -> Result<HttpResponse> {
     let token = match extract_token(req) {
         Ok(t) => t,
         Err(e) => return Ok(err_resp(StatusCode::UNAUTHORIZED, &e.0, &e.1)),
@@ -38,9 +38,7 @@ pub async fn userinfo_endoint((req, ctx): (HttpRequest, Data<AppState>)) -> Resu
     }
     let subject = data.subject.unwrap();
 
-    let user = ctx.user_db.fetch_user(&subject)?;
-
-    // TODO deliver if no openid scope?
+    let user = ctx.user_db.fetch_user_by_id(&subject)?;
 
     let mut user_info = UserInfoClaims::new(&subject);
     if granted_scopes.contains("email") && user.email.is_some() {

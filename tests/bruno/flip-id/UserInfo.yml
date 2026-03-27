@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{flipidURL}}/oauth2/userinfo"
+  url: "{{flipidURL}}/oauth2/user_info"
   auth:
     type: oauth2
     flow: authorization_code
@@ -26,6 +26,7 @@ http:
         header: Bearer
     settings:
       autoFetchToken: true
+      autoRefreshToken: false
 
 settings:
   encodeUrl: true

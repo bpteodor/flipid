@@ -1,4 +1,5 @@
 use crate::core::config::SecretConfig;
+use bcrypt::verify as bcrypt_verify;
 use jwt::EncodingKey;
 use std::collections::HashMap;
 
@@ -67,5 +68,22 @@ impl Secrets {
 
     pub fn values(&self) -> impl Iterator<Item = (&String, &Secret)> {
         self.0.iter()
+    }
+}
+
+pub fn verify_password(expected_password: &str, received_password: &str) -> actix_web::Result<(), String> {
+    if received_password.len() == 0 {
+        Err("no password received")?
+    }
+
+    if expected_password.starts_with("{BCRYPT}") {
+        let valid = bcrypt_verify(received_password, &expected_password[8..]).map_err(|e| format!("bcrypt error: {}", e))?;
+        if !valid {
+            Err("invalid password".to_string())
+        } else {
+            Ok(())
+        }
+    } else {
+        Err("invalid password encoding".to_string())
     }
 }

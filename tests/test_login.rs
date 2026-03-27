@@ -5,6 +5,7 @@ use actix_web::http::{header::SET_COOKIE, StatusCode};
 use actix_web::web::Data;
 use actix_web::{test, web, App};
 use flipid::core::cookies::AuthSessionCookie;
+use flipid::core::error::InternalError;
 use flipid::core::models::{OauthClient, User};
 use flipid::core::{self, AppState, Secrets};
 use flipid::idp::login;
@@ -14,21 +15,6 @@ use std::sync::Arc;
 
 const CLIENT_ID: &str = "test1";
 const REDIRECT_URI: &str = "http://localhost:8080/callback";
-
-fn test_user() -> User {
-    User {
-        id: "user@example.com".into(),
-        password: "hashed".into(),
-        email: Some("user@example.com".into()),
-        phone: None,
-        given_name: "Test".into(),
-        family_name: "User".into(),
-        preferred_display_name: None,
-        address: None,
-        birthdate: None,
-        locale: None,
-    }
-}
 
 fn test_client() -> OauthClient {
     OauthClient {
@@ -87,7 +73,21 @@ async fn test_login_happy_path_all_scopes_granted() {
     let mut oauth_db = Box::new(core::MockOauthDatabase::new());
     let mut user_db = Box::new(core::MockUserDatabase::new());
 
-    user_db.expect_login().times(1).returning(|_, _| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| {
+        let hash = bcrypt::hash("pass", 4).unwrap();
+        Ok(User {
+            id: "user@example.com".into(),
+            password: format!("{{BCRYPT}}{}", hash),
+            email: Some("user@example.com".into()),
+            phone: None,
+            given_name: "Test".into(),
+            family_name: "User".into(),
+            preferred_display_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+        })
+    });
     user_db
         .expect_fetch_granted_scopes()
         .times(1)
@@ -125,7 +125,21 @@ async fn test_login_consent_needed() {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let mut user_db = Box::new(core::MockUserDatabase::new());
 
-    user_db.expect_login().times(1).returning(|_, _| Ok(test_user()));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| {
+        let hash = bcrypt::hash("pass", 4).unwrap();
+        Ok(User {
+            id: "user@example.com".into(),
+            password: format!("{{BCRYPT}}{}", hash),
+            email: Some("user@example.com".into()),
+            phone: None,
+            given_name: "Test".into(),
+            family_name: "User".into(),
+            preferred_display_name: None,
+            address: None,
+            birthdate: None,
+            locale: None,
+        })
+    });
     // no scopes granted yet — handler should respond with scopes to grant
     user_db.expect_fetch_granted_scopes().times(1).returning(|_, _| Ok(HashSet::new()));
 
@@ -183,10 +197,7 @@ async fn test_login_invalid_credentials() {
     let oauth_db = Box::new(core::MockOauthDatabase::new());
     let mut user_db = Box::new(core::MockUserDatabase::new());
 
-    user_db
-        .expect_login()
-        .times(1)
-        .returning(|_, _| Err(core::error::InternalError::NotFound));
+    user_db.expect_fetch_user_by_id().times(1).returning(|_| Err(InternalError::NotFound));
 
     let mut app = test::init_service(
         App::new()
