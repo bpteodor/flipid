@@ -13,6 +13,7 @@ http:
         value: "{{$oauth2.token-app1.access_token}}"
       - name: token_type_hint
         value: access_token
+        disabled: true
   auth:
     type: basic
     username: test-app1

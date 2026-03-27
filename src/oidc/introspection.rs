@@ -1,6 +1,5 @@
-use crate::core::web_util::parse_basic_auth;
-use crate::core::{basic_auth, error::AppError, json_ok, AppState};
-use actix_web::http::header::AUTHORIZATION;
+use crate::core::{error::AppError, json_ok, AppState};
+use crate::oidc::common::validate_client_credentials;
 use actix_web::web::{Data, Form};
 use actix_web::{HttpRequest, HttpResponse, Result};
 use chrono::{Duration, Utc};
@@ -75,27 +74,4 @@ pub async fn introspect((params, state, req): (Form<IntrospectParams>, Data<AppS
         iat: Some(token_data.created.and_utc().timestamp()),
         token_type: Some(token_data.token_type),
     })
-}
-
-fn validate_client_credentials(req: &HttpRequest, state: &Data<AppState>) -> Result<(), String> {
-    let raw_basic_auth_header = req
-        .headers()
-        .get(AUTHORIZATION)
-        .ok_or("no authorization header")?
-        .to_str()
-        .map_err(|_| "header convert error")?;
-
-    let (client_id, _) = parse_basic_auth(&raw_basic_auth_header).ok_or("error parsing basic auth header")?;
-
-    let client = state
-        .oauth_db
-        .fetch_client_config(&client_id)
-        .map_err(|e| format!("error loading client {}: {}", &client_id, e).to_owned())?;
-
-    // todo hash client_secret and verify like user password
-    if raw_basic_auth_header != basic_auth(&client.id, &client.secret) {
-        Err("invalid credentials")?
-    }
-
-    Ok(())
 }

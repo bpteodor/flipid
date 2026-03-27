@@ -1,14 +1,14 @@
 use super::core;
 use super::core::error::{AppError, InternalError};
-use super::core::models::{OauthSession, User};
+use super::core::models::OauthSession;
 use super::core::AppState;
 use crate::core::cookies::{fill_cookie_jar, set_cookies_from_jar, AuthSessionCookie, SSOCookie};
+use crate::core::secrets::verify_password;
 use actix_web::cookie::Cookie;
 use actix_web::http::header::CONTENT_LOCATION;
 use actix_web::http::StatusCode;
 use actix_web::web::{Data, Json};
 use actix_web::{HttpRequest, HttpResponse, Result};
-use bcrypt::verify as bcrypt_verify;
 use chrono::DateTime;
 use chrono::{offset::Utc, Duration};
 use rand::distr::Alphanumeric;
@@ -45,8 +45,12 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
     // validate the user
     //let user = state.user_db.login(&form.username, &form.password)?;
     let user = state.user_db.fetch_user_by_id(&form.username)?;
-    info!("user {} loaded", &form.username);
-    verify_password(&user, &form.password)?;
+    debug!("user {} loaded", &form.username);
+    verify_password(&user.password, &form.password).map_err(|e| {
+        info!("failed to verify password: {}", e);
+        AppError::Unauthorized
+    })?;
+    info!("user password validated");
 
     let requested_scopes: HashSet<&str> = auth_ses.scopes.split_whitespace().collect();
 
@@ -94,24 +98,6 @@ pub async fn login((form, state, req): (Json<LoginReq>, Data<AppState>, HttpRequ
         )?;
         set_cookies_from_jar(&cookie_jar, &mut resp);
         Ok(resp)
-    }
-}
-
-fn verify_password(user: &User, received_password: &str) -> Result<(), AppError> {
-    if user.password.len() > 8 && user.password.starts_with("{BCRYPT}") {
-        let valid = bcrypt_verify(received_password, &user.password[8..]).map_err(|e| {
-            error!("bcrypt error: {}", e);
-            AppError::InternalError
-        })?;
-        if !valid {
-            info!("invalid password");
-            Err(AppError::Unauthorized)
-        } else {
-            Ok(())
-        }
-    } else {
-        error!("invalid password encoding for user {}", user.id);
-        Err(AppError::Unauthorized)
     }
 }
 
