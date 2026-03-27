@@ -17,6 +17,14 @@ pub fn basic_auth(user: &str, pass: &str) -> String {
     format!("Basic {}", &b64)
 }
 
+pub fn parse_basic_auth(basic_auth_header: &str) -> Option<(String, String)> {
+    let encoded = basic_auth_header.strip_prefix("Basic ")?;
+    let decoded = BASE64_STANDARD.decode(encoded).ok()?;
+    let decoded_str = String::from_utf8(decoded).ok()?;
+    let (id, secret) = decoded_str.split_once(':')?;
+    Some((id.to_string(), secret.to_string()))
+}
+
 pub fn send_json<T: serde::Serialize>(status: StatusCode, obj: T) -> Result<HttpResponse> {
     let content = serde_json::to_string(&obj)?;
     trace!("sending json: [{}] {}", status, content); // can be sensible content
@@ -55,5 +63,10 @@ mod tests {
     #[test]
     fn test_basic_auth() {
         assert_eq!(basic_auth("admin", "admin"), "Basic YWRtaW46YWRtaW4=");
+    }
+
+    #[test]
+    fn test_parse_basic_auth() {
+        assert_eq!(parse_basic_auth("Basic YWRtaW46YWRtaW4="), Some(("admin".to_owned(), "admin".to_owned())));
     }
 }

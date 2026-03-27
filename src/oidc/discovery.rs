@@ -22,7 +22,8 @@ pub async fn openid_config((_req, state): (HttpRequest, Data<AppState>)) -> Resu
         issuer: base_url.clone(),
         authorization_endpoint: base_url.clone() + "/oauth2/authorize",
         token_endpoint: base_url.clone() + "/oauth2/token",
-        userinfo_endpoint: Some(base_url.clone() + "/oauth2/userinfo"),
+        introspection_endpoint: Some(base_url.clone() + "/oauth2/token_info"),
+        userinfo_endpoint: Some(base_url.clone() + "/oauth2/user_info"),
         jwks_uri: base_url.clone() + "/.well-known/jwks.json",
         scopes_supported: Some(supported_scopes(&state.config.oauth.scopes)),
         response_types_supported: vec!["code".into()],                  // TODO token?
@@ -49,6 +50,8 @@ pub struct OIDCProviderConfig {
     token_endpoint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     userinfo_endpoint: Option<String>, // RECOMENDED
+    #[serde(skip_serializing_if = "Option::is_none")]
+    introspection_endpoint: Option<String>,
     jwks_uri: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     registration_endpoint: Option<String>, // RECOMENDED
