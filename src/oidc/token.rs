@@ -47,7 +47,14 @@ pub async fn token_endpoint((data, state, req): (Form<TokenParams>, Data<AppStat
             // todo add JWT support for access_token
             let access_token: String = rand::rng().sample_iter(&Alphanumeric).take(30).map(char::from).collect::<String>();
 
-            let id_token = build_id_token(&state, &session)?;
+            // todo fix scope check
+            let id_token = if session.scopes.contains("openid") {
+                Some(build_id_token(&state, &session)?)
+            } else {
+                None
+            };
+
+            // todo refresh token on "offline_access" scope
 
             // save access_token to db
             state
@@ -128,7 +135,7 @@ pub struct TokenResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     refresh_token: Option<String>,
     expires_in: i64,
-    id_token: String,
+    id_token: Option<String>, // only if 'openid' scope is requested
 }
 
 #[derive(Debug, Serialize, Deserialize)]

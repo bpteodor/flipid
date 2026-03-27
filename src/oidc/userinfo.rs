@@ -40,8 +40,6 @@ pub async fn userinfo_endpoint((req, ctx): (HttpRequest, Data<AppState>)) -> Res
 
     let user = ctx.user_db.fetch_user(&subject)?;
 
-    // TODO deliver if no openid scope?
-
     let mut user_info = UserInfoClaims::new(&subject);
     if granted_scopes.contains("email") && user.email.is_some() {
         user_info.email = user.email;
