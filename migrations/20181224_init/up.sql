@@ -8,11 +8,6 @@ CREATE TABLE oauth_clients (
   allowed_scopes VARCHAR NOT NULL
 );
 
-CREATE TABLE oauth_scopes (
-  name VARCHAR NOT NULL PRIMARY KEY,
-  description VARCHAR
-);
-
 CREATE TABLE oauth_sessions (
   auth_code VARCHAR NOT NULL PRIMARY KEY,
   client_id VARCHAR not null,
@@ -60,13 +55,11 @@ CREATE TABLE granted_scopes (
   user_id VARCHAR NOT NULL,
   PRIMARY KEY (client_id, user_id, scope)
   FOREIGN KEY (client_id) REFERENCES oauth_clients(id),
-  FOREIGN KEY (scope) REFERENCES oauth_scopes(name) --, FOREIGN KEY (user_id) REFERENCES users(id) ?different db?
+  FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 -- TEST data
 
-
-INSERT INTO oauth_scopes(name) VALUES('openid'), ('profile'), ('email');
 INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUES
   ('test-app1', 'secret', 'TestApp1', '["http://localhost:8080/callback","http://localhost:9009/auth/callback"]', 'openid profile email phone address'),
   ('test-app2', 'secret', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb"]', 'openid profile'),
@@ -77,8 +70,8 @@ INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUE
 ;
 -- pass is 'test'
 -- NOTE: THE PASSWORDS ARE HASHED
-INSERT INTO users VALUES 
-('max', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW', 
+INSERT INTO users VALUES
+('max', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW',
   'max@test.local', "+401234567", 'Max', 'Muster', 'Maxy', 'Stuttgart', '1980-04-01', 'de-DE'),
-('rik', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW', 
+('rik', '{BCRYPT}$2a$12$q5FYZ85CT/vbMCseRymXe.s0LAPZEaGXuGedEeX8cUk5B6RubbyMW',
   'erika@test.local', "+49938568", 'Erika', 'Muster', 'rik', 'Berlin', '1969-03-07', 'en-DE');

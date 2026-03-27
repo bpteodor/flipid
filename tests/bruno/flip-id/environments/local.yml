@@ -1,0 +1,4 @@
+name: local
+variables:
+  - name: flipidURL
+    value: https://openid.local:9000
