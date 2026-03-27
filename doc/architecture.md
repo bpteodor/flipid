@@ -18,14 +18,15 @@ The project is organized in Rust modules
 
 - implements the Oauth2/Opend Id Connect protocol endpoints
 - context-path: `/op`
- 
-| Path              | Name                      | Support |
-|-------------------|---------------------------|--|
-| /oauth2/authorize     | Authorization Endpoint    | oidc (draft) |
-| /oauth2/token         | Token Endpoint            |  |
-| /oauth2/userinfo      | UserInfo Endpoint         |  |
-| /oauth2/jwks          | JWK Set                   |  |
+
+| Path                              | Name                     | Support |
+|-----------------------------------|--------------------------|--|
+| /oauth2/authorize                 | Authorization Endpoint   | oidc (draft) |
+| /oauth2/token                     | Token Endpoint           |  |
+| /oauth2/token_info                | Introspection Endpoint   |  |
+| /oauth2/user_info                 | UserInfo Endpoint        |  |
 | /.well-known/openid-configuration | OpenID Connect Discovery |  |
+| /.well-known/jwks.json            | JWK Set                  |  |
 
 ## 4. IDP
 
@@ -51,115 +52,80 @@ The technology is to be decided (probably VueJS).
 
 The complete login journey for a user with no existing session and scopes that have not yet been granted.
 
-```plantuml
-@startuml
-title Authorization Code Flow — Full Login with Consent
+```mermaid
+sequenceDiagram
+    participant User as User / Browser
+    participant Client as OAuth2 Client
+    participant OP as FlipID (OP)
+    participant DB as Database
 
-skinparam defaultFontSize 12
-skinparam sequenceArrowThickness 1.5
-skinparam roundcorner 6
-skinparam sequenceParticipantBorderThickness 1
-skinparam noteBorderThickness 1
-skinparam noteBackgroundColor #FFFDE7
-skinparam noteBorderColor #F9A825
+    Client->>User: redirect to /oauth2/authorize
+    User->>OP: GET /oauth2/authorize<br/>(client_id, redirect_uri, scope,<br/>response_type=code, state, nonce)
 
-participant "User / Browser" as User #D6EAF8
-participant "OAuth2 Client" as Client #D5F5E3
-participant "FlipID (OP)" as OP #FDEBD0
-database "Database" as DB #EAECEE
+    OP->>OP: validate client_id, redirect_uri,<br/>response_type, scope
+    OP->>OP: read session cookie → no SSO session found
 
-Client -> User: redirect to /oauth2/authorize
-User -> OP: GET /oauth2/authorize\n(client_id, redirect_uri, scope,\nresponse_type=code, state, nonce)
+    OP-->>User: 200 OK — Login page (HTML)
+    Note right of User: Set-Cookie (HttpOnly, 10 min)<br/>session: {client_id, scope, nonce,<br/>redirect_uri, state}
 
-OP -> OP: validate client_id, redirect_uri,\nresponse_type, scope
-OP -> OP: read session cookie\n→ no SSO session found
+    User->>OP: POST /idp/login<br/>(username, password)<br/>[Cookie: session={auth params}]
+    OP->>DB: lookup user by SHA256(password)
+    DB-->>OP: user record
+    OP->>DB: check granted scopes<br/>for subject + client_id
+    DB-->>OP: scopes not all granted
+    OP-->>User: 200 OK — Consent page (HTML)
 
-OP --> User: 200 OK — Login page (HTML)
-note right of User
-  **Set-Cookie** (HttpOnly, 10 min)
-  session: {client_id, scope, nonce,
-            redirect_uri, state}
-end note
+    User->>OP: POST /idp/consent<br/>(approved scopes)<br/>[Cookie: session={auth params}]
+    OP->>DB: save granted scopes<br/>(subject + client_id)
+    OP->>DB: generate auth code (10 chars)<br/>store with expiry, subject, redirect_uri
 
-User -> OP: POST /idp/login\n(username, password)\n[Cookie: session={auth params}]
-OP -> DB: lookup user by SHA256(password)
-DB --> OP: user record
-OP -> DB: check granted scopes\nfor subject + client_id
-DB --> OP: scopes not all granted
-OP --> User: 200 OK — Consent page (HTML)
+    OP-->>User: 302 Redirect → redirect_uri?code=CODE&state=STATE
+    Note right of User: Set-Cookie (HttpOnly)<br/>session: {subject, auth_time}<br/>(replaces auth session — SSO session)
 
-User -> OP: POST /idp/consent\n(approved scopes)\n[Cookie: session={auth params}]
-OP -> DB: save granted scopes\n(subject + client_id)
-OP -> DB: generate auth code (10 chars)\nstore with expiry, subject, redirect_uri
+    User->>Client: follow redirect<br/>(delivers code + state)
 
-OP --> User: 302 Redirect → redirect_uri?code=CODE&state=STATE
-note right of User
-  **Set-Cookie** (HttpOnly)
-  session: {subject, auth_time}
-  (replaces auth session — SSO session)
-end note
-
-User -> Client: follow redirect\n(delivers code + state)
-
-Client -> OP: POST /oauth2/token\nAuthorization: Basic client_id:secret\ngrant_type=authorization_code\ncode, redirect_uri
-OP -> DB: validate code\n(expiry, redirect_uri match, one-time use)
-DB --> OP: code record\n(subject, scope, nonce, auth_time)
-OP -> OP: generate access_token (30 random chars)
-OP -> OP: sign id_token (RS256 JWT)\n{iss, sub, aud, exp, iat, auth_time, nonce}
-OP -> DB: store access_token + id_token
-OP --> Client: 200 OK — TokenResponse\n{access_token, id_token,\ntoken_type=Bearer, expires_in}
-
-@enduml
+    Client->>OP: POST /oauth2/token<br/>Authorization: Basic client_id:secret<br/>grant_type=authorization_code<br/>code, redirect_uri
+    OP->>DB: validate code<br/>(expiry, redirect_uri match, one-time use)
+    DB-->>OP: code record<br/>(subject, scope, nonce, auth_time)
+    OP->>OP: generate access_token (30 random chars)
+    OP->>OP: sign id_token (RS256 JWT)<br/>{iss, sub, aud, exp, iat, auth_time, nonce}
+    OP->>DB: store access_token + id_token
+    OP-->>Client: 200 OK — TokenResponse<br/>{access_token, id_token,<br/>token_type=Bearer, expires_in}
 ```
 
 ### 5.2 SSO Flow (Existing Session, All Scopes Already Granted)
 
 When the user already has a valid SSO session cookie and all requested scopes were previously granted, the login and consent steps are skipped entirely.
 
-```plantuml
-@startuml
-title Authorization Code Flow — SSO (Existing Session)
+```mermaid
+sequenceDiagram
+    participant User as User / Browser
+    participant Client as OAuth2 Client
+    participant OP as FlipID (OP)
+    participant DB as Database
 
-skinparam defaultFontSize 12
-skinparam sequenceArrowThickness 1.5
-skinparam roundcorner 6
-skinparam sequenceParticipantBorderThickness 1
-skinparam noteBorderThickness 1
-skinparam noteBackgroundColor #FFFDE7
-skinparam noteBorderColor #F9A825
+    Client->>User: redirect to /oauth2/authorize
+    User->>OP: GET /oauth2/authorize<br/>(client_id, redirect_uri, scope,<br/>response_type=code, state, nonce)<br/>[Cookie: session={subject, auth_time}]
+    Note right of User: Cookie (existing SSO session)<br/>session: {subject, auth_time}
 
-participant "User / Browser" as User #D6EAF8
-participant "OAuth2 Client" as Client #D5F5E3
-participant "FlipID (OP)" as OP #FDEBD0
-database "Database" as DB #EAECEE
+    OP->>OP: validate client_id, redirect_uri,<br/>response_type, scope
+    OP->>OP: decode session cookie → subject, auth_time
 
-Client -> User: redirect to /oauth2/authorize
-User -> OP: GET /oauth2/authorize\n(client_id, redirect_uri, scope,\nresponse_type=code, state, nonce)\n[Cookie: session={subject, auth_time}]
-note right of User
-  **Cookie** (existing SSO session)
-  session: {subject, auth_time}
-end note
+    OP->>DB: check granted scopes<br/>for subject + client_id
+    DB-->>OP: all requested scopes already granted
 
-OP -> OP: validate client_id, redirect_uri,\nresponse_type, scope
-OP -> OP: decode session cookie\n→ subject, auth_time
+    OP->>DB: generate auth code (10 chars)<br/>store with expiry, subject, redirect_uri
+    OP-->>User: 302 Redirect → redirect_uri?code=CODE&state=STATE
 
-OP -> DB: check granted scopes\nfor subject + client_id
-DB --> OP: all requested scopes already granted
+    User->>Client: follow redirect<br/>(delivers code + state)
 
-OP -> DB: generate auth code (10 chars)\nstore with expiry, subject, redirect_uri
-OP --> User: 302 Redirect → redirect_uri?code=CODE&state=STATE
-
-User -> Client: follow redirect\n(delivers code + state)
-
-Client -> OP: POST /oauth2/token\nAuthorization: Basic client_id:secret\ngrant_type=authorization_code\ncode, redirect_uri
-OP -> DB: validate code\n(expiry, redirect_uri match, one-time use)
-DB --> OP: code record\n(subject, scope, nonce, auth_time)
-OP -> OP: generate access_token (30 random chars)
-OP -> OP: sign id_token (RS256 JWT)\n{iss, sub, aud, exp, iat, auth_time, nonce}
-OP -> DB: store access_token + id_token
-OP --> Client: 200 OK — TokenResponse\n{access_token, id_token,\ntoken_type=Bearer, expires_in}
-
-@enduml
+    Client->>OP: POST /oauth2/token<br/>Authorization: Basic client_id:secret<br/>grant_type=authorization_code<br/>code, redirect_uri
+    OP->>DB: validate code<br/>(expiry, redirect_uri match, one-time use)
+    DB-->>OP: code record<br/>(subject, scope, nonce, auth_time)
+    OP->>OP: generate access_token (30 random chars)
+    OP->>OP: sign id_token (RS256 JWT)<br/>{iss, sub, aud, exp, iat, auth_time, nonce}
+    OP->>DB: store access_token + id_token
+    OP-->>Client: 200 OK — TokenResponse<br/>{access_token, id_token,<br/>token_type=Bearer, expires_in}
 ```
 
 ### 5.3 Session Cookie vs. Auth Code
