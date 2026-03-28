@@ -2,6 +2,7 @@ use flipid::core::{self, AppState, Secrets};
 use flipid::{db, idp, oidc};
 use std::sync::Arc;
 
+use actix_cors::Cors;
 use actix_files as fs;
 use actix_web::cookie::Key;
 use actix_web::{middleware, web, App, HttpRequest, HttpServer, Result};
@@ -40,24 +41,32 @@ async fn main() -> std::io::Result<()> {
                 cfg.clone(),
             )))
             .wrap(middleware::Logger::default()) // logging
-            .wrap(init_cors(&cfg.server.cors))
             //.wrap(init_session(session_key.clone(), &cfg))
             // static resources
             .service(fs::Files::new("/s", ".").show_files_listing())
             .route("/favicon.ico", web::get().to(favicon))
-            // openid provider
-            .route("/.well-known/openid-configuration", web::get().to(oidc::discovery::openid_config))
-            .route("/.well-known/jwks.json", web::get().to(oidc::jwks::get_keys))
-            .route("/oauth2/authorize", web::get().to(oidc::authorize::auth_get))
-            .route("/oauth2/authorize", web::post().to(oidc::authorize::auth_post))
-            .route("/oauth2/token", web::post().to(oidc::token::token_endpoint))
-            .route("/oauth2/token_info", web::post().to(oidc::introspection::introspect))
-            .route("/oauth2/user_info", web::get().to(oidc::userinfo::userinfo_endpoint))
-            .route("/oauth2/user_info", web::post().to(oidc::userinfo::userinfo_endpoint))
-            // identity provider (should be customizable)
-            .route("/idp/login", web::post().to(idp::login))
-            .route("/idp/consent", web::post().to(idp::consent))
-            .route("/idp/cancel", web::post().to(idp::cancel_login))
+            // well-known endpoints: open to all origins
+            .service(
+                web::scope("/.well-known")
+                    .wrap(Cors::permissive())
+                    .route("/openid-configuration", web::get().to(oidc::discovery::openid_config))
+                    .route("/jwks.json", web::get().to(oidc::jwks::get_keys)),
+            )
+            // all other endpoints: configured CORS
+            .service(
+                web::scope("")
+                    .wrap(init_cors(&cfg.server.cors))
+                    .route("/oauth2/authorize", web::get().to(oidc::authorize::auth_get))
+                    .route("/oauth2/authorize", web::post().to(oidc::authorize::auth_post))
+                    .route("/oauth2/token", web::post().to(oidc::token::token_endpoint))
+                    .route("/oauth2/token_info", web::post().to(oidc::introspection::introspect))
+                    .route("/oauth2/user_info", web::get().to(oidc::userinfo::userinfo_endpoint))
+                    .route("/oauth2/user_info", web::post().to(oidc::userinfo::userinfo_endpoint))
+                    // identity provider (should be customizable)
+                    .route("/idp/login", web::post().to(idp::login))
+                    .route("/idp/consent", web::post().to(idp::consent))
+                    .route("/idp/cancel", web::post().to(idp::cancel_login)),
+            )
     });
 
     log::info!("encrypted communication: {}", is_https);
@@ -105,16 +114,28 @@ fn load_server_cert(tls: &core::config::TlsConfig) -> openssl::ssl::SslAcceptorB
         .build()
 }*/
 
-fn init_cors(cors: &core::config::CorsConfig) -> middleware::DefaultHeaders {
-    let mut headers = middleware::DefaultHeaders::new();
-    for origin in &cors.allow_origin {
-        headers = headers.add(("Access-Control-Allow-Origin", origin.as_str()));
+fn init_cors(cors_cfg: &core::config::CorsConfig) -> Cors {
+    let mut cors = Cors::default();
+    for origin in &cors_cfg.allow_origin {
+        cors = cors.allowed_origin(origin.as_str());
     }
-    for method in &cors.allow_methods {
-        headers = headers.add(("Access-Control-Allow-Methods", method.as_str()));
+    if !cors_cfg.allow_methods.is_empty() {
+        cors = cors.allowed_methods(
+            cors_cfg
+                .allow_methods
+                .iter()
+                .filter_map(|m| m.parse::<actix_web::http::Method>().ok())
+                .collect::<Vec<_>>(),
+        );
     }
-    for header in &cors.allow_headers {
-        headers = headers.add(("Access-Control-Allow-Headers", header.as_str()));
+    if !cors_cfg.allow_headers.is_empty() {
+        cors = cors.allowed_headers(
+            cors_cfg
+                .allow_headers
+                .iter()
+                .filter_map(|h| h.parse::<actix_web::http::header::HeaderName>().ok())
+                .collect::<Vec<_>>(),
+        );
     }
-    headers.add(("Access-Control-Request-Headers", "X-Requested-With, accept, content-type"))
+    cors
 }
