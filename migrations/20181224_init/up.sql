@@ -62,8 +62,8 @@ CREATE TABLE granted_scopes (
 
 -- NOTE: client_secret is 'secret'
 INSERT INTO oauth_clients (id, secret, name, callback_url, allowed_scopes) VALUES
-  ('test-app1', '{BCRYPT}$2a$12$/6vfdruZ75b5gm1O74DiBuc7TYHq7Mdx/a8kW/esl26Xd/wq1X8YG', 'TestApp1', '["http://localhost:8080/callback","http://localhost:9009/auth/callback"]', 'openid profile email phone address'),
-  ('test-app2', '{BCRYPT}$2a$12$/6vfdruZ75b5gm1O74DiBuc7TYHq7Mdx/a8kW/esl26Xd/wq1X8YG', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb"]', 'openid profile'),
+  ('test-app1', '{BCRYPT}$2a$12$/6vfdruZ75b5gm1O74DiBuc7TYHq7Mdx/a8kW/esl26Xd/wq1X8YG', 'TestApp1', '["http://localhost:8080/callback","http://localhost:3000/demo/oauth-callback"]', 'openid profile email phone address'),
+  ('test-app2', '{BCRYPT}$2a$12$/6vfdruZ75b5gm1O74DiBuc7TYHq7Mdx/a8kW/esl26Xd/wq1X8YG', 'TestApp2', '["http://localhost:8080/oidc_client_vaadin_war/cb","http://localhost:3000/demo/oauth-callback"]', 'openid profile'),
   ('oidcdebugger', 'oidcdebugger', 'oidc Debugger', '["https://oidcdebugger.com/debug"]', 'openid profile email'),
   ('cert', 'cert123!', 'cert', '["https://op.certification.openid.net:62156/authz_cb","https://op.certification.openid.net:62156/authz_post"]', 'openid profile email'),
   ('cert2', 'cert123!', 'cert2', '["https://op.certification.openid.net:61505/authz_cb","https://op.certification.openid.net:61505/authz_post"]', 'openid profile email phone'),

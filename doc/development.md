@@ -53,12 +53,20 @@ openssl req -x509 -newkey rsa:4096 -keyout tls.key -out tls.cert -nodes
 
 ```bash
 docker run --rm -ti -p 9000:9000 --name flip-id \
-  -v $(pwd)/target/test.db:/app/target/test.db \
+  -v $(pwd)/target/demo.db:/app/target/demo.db \
   -v $(pwd)/.env:/app/.env:ro \
   -v $(pwd)/config:/app/config:ro \
   -w /app \
   -e "RUN_BEHIND_PROXY=true" \
   my-flipid
+```
+
+## demo app
+
+```bash
+cd doc
+docker compose up
+open http://localhost:9009
 ```
 
 ## Links
