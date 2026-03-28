@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "flipid_alpha1.config.schema.json",
+  "title": "FlipID Configuration",
+  "description": "Configuration schema for the FlipID OpenID Provider",
+  "type": "object",
+  "required": ["server", "core", "database", "auth", "oauth", "secrets"],
+  "additionalProperties": false,
+  "properties": {
+    "server": {
+      "type": "object",
+      "description": "HTTP server settings",
+      "required": ["address", "domain", "port", "protocol"],
+      "additionalProperties": false,
+      "properties": {
+        "address": {
+          "type": "string",
+          "description": "Bind address. Use 0.0.0.0 to expose the service externally.",
+          "examples": ["127.0.0.1", "0.0.0.0"]
+        },
+        "domain": {
+          "type": "string",
+          "description": "Domain used for setting the session cookie.",
+          "examples": ["openid.local"]
+        },
+        "port": {
+          "type": "integer",
+          "description": "TCP port the server listens on.",
+          "minimum": 1,
+          "maximum": 65535,
+          "examples": [9000]
+        },
+        "protocol": {
+          "type": "string",
+          "description": "Transport protocol.",
+          "enum": ["http", "https"]
+        },
+        "tls": {
+          "type": "object",
+          "description": "TLS certificate and key paths. Required when protocol is https.",
+          "required": ["cert", "key"],
+          "additionalProperties": false,
+          "properties": {
+            "cert": {
+              "type": "string",
+              "description": "Path to the TLS certificate file (PEM).",
+              "examples": ["config/tls.cert"]
+            },
+            "key": {
+              "type": "string",
+              "description": "Path to the TLS private key file (PEM).",
+              "examples": ["config/tls.key"]
+            }
+          }
+        },
+        "cors": {
+          "type": "object",
+          "description": "CORS policy for the server.",
+          "additionalProperties": false,
+          "properties": {
+            "allow_origin": {
+              "type": "array",
+              "description": "List of allowed origins.",
+              "items": { "type": "string" },
+              "examples": [["https://fonts.gstatic.com"]]
+            },
+            "allow_methods": {
+              "type": "array",
+              "description": "List of allowed HTTP methods.",
+              "items": {
+                "type": "string",
+                "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]
+              },
+              "examples": [["GET"]]
+            },
+            "allow_headers": {
+              "type": "array",
+              "description": "List of allowed request headers.",
+              "items": { "type": "string" },
+              "examples": [["Content-Type"]]
+            }
+          }
+        }
+      }
+    },
+    "core": {
+      "type": "object",
+      "description": "Core application settings",
+      "required": ["secure_cookies"],
+      "additionalProperties": false,
+      "properties": {
+        "secure_cookies": {
+          "type": "boolean",
+          "description": "Set the Secure flag on session cookies. Should be true in production (requires HTTPS).",
+          "examples": [true]
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "description": "Database connection settings",
+      "required": ["url"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Path to the SQLite database file.",
+          "examples": ["target/demo.db"]
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Session and cookie authentication settings",
+      "required": ["auth_session", "sso_session", "session_key"],
+      "additionalProperties": false,
+      "properties": {
+        "auth_session": {
+          "type": "string",
+          "description": "Cookie name used for the per-request authentication session.",
+          "examples": ["SID"]
+        },
+        "sso_session": {
+          "type": "string",
+          "description": "Cookie name used for the SSO (single sign-on) session.",
+          "examples": ["SSO"]
+        },
+        "session_key": {
+          "type": "string",
+          "description": "Hex-encoded secret used to encrypt session cookies. Must be at least 512 bits (64 bytes / characters).",
+          "minLength": 64,
+          "pattern": "^[0-9a-fA-F]+$",
+          "examples": ["ce344c9833ba4bf7a71e57b01985beaf444a18b6f3fa40258835eb9c223698c2"]
+        }
+      }
+    },
+    "oauth": {
+      "type": "object",
+      "description": "OAuth 2.0 / OpenID Connect settings",
+      "required": ["issuer", "scopes", "auth_code_exp", "token_exp", "access_token", "id_token"],
+      "additionalProperties": false,
+      "properties": {
+        "issuer": {
+          "type": "string",
+          "description": "Base URL of this OpenID Provider. Used as the `iss` claim in issued tokens.",
+          "format": "uri",
+          "examples": ["http://openid.local:9000"]
+        },
+        "scopes": {
+          "type": "string",
+          "description": "Space-separated list of supported OAuth scopes.",
+          "examples": ["openid profile email phone address"]
+        },
+        "auth_code_exp": {
+          "type": "integer",
+          "description": "Authorization code lifetime in minutes.",
+          "minimum": 1,
+          "examples": [60]
+        },
+        "token_exp": {
+          "type": "integer",
+          "description": "Access/ID token lifetime in seconds.",
+          "minimum": 1,
+          "examples": [600]
+        },
+        "access_token": {
+          "type": "object",
+          "description": "Access token configuration",
+          "required": ["type"],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Access token format. REF issues an opaque reference token; JWT issues a signed JWT.",
+              "enum": ["REF", "JWT"]
+            },
+            "signing_alg": {
+              "type": "string",
+              "description": "JWT signing algorithm. Required when type is JWT. Must match a key available in `available_signing`.",
+              "enum": ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"]
+            },
+            "available_signing": {
+              "$ref": "#/$defs/signingKeyMap"
+            }
+          }
+        },
+        "id_token": {
+          "type": "object",
+          "description": "ID token configuration",
+          "required": ["signing_alg", "available_signing"],
+          "additionalProperties": false,
+          "properties": {
+            "signing_alg": {
+              "type": "string",
+              "description": "Default JWT signing algorithm for ID tokens. Must match a key listed in `available_signing`.",
+              "enum": ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "EdDSA"]
+            },
+            "available_signing": {
+              "$ref": "#/$defs/signingKeyMap"
+            }
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "array",
+      "description": "Named cryptographic keys and secrets used for JWT signing.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "description": "A named cryptographic key or secret.",
+        "required": ["name", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Unique alias for this key. Referenced in `available_signing` maps.",
+            "examples": ["rsa1", "ec256", "hmac256Secret"]
+          },
+          "type": {
+            "type": "string",
+            "description": "Key type. SECRET = HMAC symmetric secret; RSA = RS*/PS* signing; EC = ES* signing; ED = EdDSA signing.",
+            "enum": ["SECRET", "RSA", "EC", "ED"]
+          },
+          "value": {
+            "type": "string",
+            "description": "Inline secret value. Used for SECRET type. Must meet the minimum bit length for the intended HMAC algorithm (HS256: 256-bit, HS384: 384-bit, HS512: 512-bit).",
+            "examples": ["K48WDZ9VuB50BpDcThM396MRJqz2yJrv"]
+          },
+          "file": {
+            "type": "string",
+            "description": "Path to a PEM-encoded key file. Used for RSA, EC, and ED types.",
+            "examples": ["config/rsa.key", "config/es256.pkcs8.key"]
+          }
+        },
+        "oneOf": [
+          {
+            "description": "Inline secret (SECRET type)",
+            "properties": { "type": { "const": "SECRET" } },
+            "required": ["value"]
+          },
+          {
+            "description": "File-backed key (RSA, EC, or ED type)",
+            "properties": { "type": { "enum": ["RSA", "EC", "ED"] } },
+            "required": ["file"]
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "signingKeyMap": {
+      "type": "object",
+      "description": "Map of signing algorithm to list of key aliases that may be used for that algorithm.",
+      "additionalProperties": false,
+      "properties": {
+        "HS256": { "type": "array", "items": { "type": "string" } },
+        "HS384": { "type": "array", "items": { "type": "string" } },
+        "HS512": { "type": "array", "items": { "type": "string" } },
+        "RS256": { "type": "array", "items": { "type": "string" } },
+        "RS384": { "type": "array", "items": { "type": "string" } },
+        "RS512": { "type": "array", "items": { "type": "string" } },
+        "ES256": { "type": "array", "items": { "type": "string" } },
+        "ES384": { "type": "array", "items": { "type": "string" } },
+        "ES512": { "type": "array", "items": { "type": "string" } },
+        "PS256": { "type": "array", "items": { "type": "string" } },
+        "PS384": { "type": "array", "items": { "type": "string" } },
+        "PS512": { "type": "array", "items": { "type": "string" } },
+        "EdDSA": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
