@@ -66,6 +66,7 @@ docker run --rm -ti -p 9000:9000 --name flip-id \
 ```bash
 cd doc
 docker compose up
+open http://localhost:9009
 ```
 
 ## Links
