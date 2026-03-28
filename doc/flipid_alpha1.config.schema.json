@@ -112,24 +112,26 @@
     "auth": {
       "type": "object",
       "description": "Session and cookie authentication settings",
-      "required": ["auth_session", "sso_session", "session_key"],
+      "required": ["session_key"],
       "additionalProperties": false,
       "properties": {
         "auth_session": {
           "type": "string",
           "description": "Cookie name used for the per-request authentication session.",
+          "default": "flip_auth",
           "examples": ["SID"]
         },
         "sso_session": {
           "type": "string",
           "description": "Cookie name used for the SSO (single sign-on) session.",
+          "default": "SSO",
           "examples": ["SSO"]
         },
         "session_key": {
           "type": "string",
           "description": "Hex-encoded secret used to encrypt session cookies. Must be at least 512 bits (64 bytes / characters).",
           "minLength": 64,
-          "pattern": "^[0-9a-fA-F]+$",
+          "pattern": "^[0-9a-zA-Z-_\s!$]+$",
           "examples": ["ce344c9833ba4bf7a71e57b01985beaf444a18b6f3fa40258835eb9c223698c2"]
         }
       }
@@ -137,7 +139,7 @@
     "oauth": {
       "type": "object",
       "description": "OAuth 2.0 / OpenID Connect settings",
-      "required": ["issuer", "scopes", "auth_code_exp", "token_exp", "access_token", "id_token"],
+      "required": ["issuer", "id_token"],
       "additionalProperties": false,
       "properties": {
         "issuer": {
@@ -149,30 +151,33 @@
         "scopes": {
           "type": "string",
           "description": "Space-separated list of supported OAuth scopes.",
+          "default": "openid profile email phone address",
           "examples": ["openid profile email phone address"]
         },
         "auth_code_exp": {
           "type": "integer",
           "description": "Authorization code lifetime in minutes.",
+          "default": 10,
           "minimum": 1,
           "examples": [60]
         },
         "token_exp": {
           "type": "integer",
           "description": "Access/ID token lifetime in seconds.",
+          "default": 600,
           "minimum": 1,
           "examples": [600]
         },
         "access_token": {
           "type": "object",
           "description": "Access token configuration",
-          "required": ["type"],
           "additionalProperties": false,
           "properties": {
             "type": {
               "type": "string",
               "description": "Access token format. REF issues an opaque reference token; JWT issues a signed JWT.",
-              "enum": ["REF", "JWT"]
+              "enum": ["REF", "JWT"],
+              "default": "REF"
             },
             "signing_alg": {
               "type": "string",
