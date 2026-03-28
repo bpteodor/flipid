@@ -1,0 +1,18 @@
+services:
+  oidc-test-client:
+    image: ghcr.io/beryju/oidc-test-client
+    ports:
+      - "9009:9009"
+    #--net=host
+    environment:
+      OIDC_CLIENT_ID: test-app1
+      OIDC_CLIENT_SECRET: secret
+      OIDC_SCOPES: openid email profile
+      OIDC_PROVIDER: https://openid.local:9000
+      #OIDC_DO_REFRESH: false
+      #OIDC_DO_INTROSPECTION: true
+      OIDC_DO_USER_INFO: true
+      OIDC_TLS_VERIFY: false
+    extra_hosts:
+      - "openid.local:10.1.1.12"
+      # host.docker.internal
