@@ -3,7 +3,7 @@
 [package]
 name = "flipid"
 description = "A lightweight Openid Provider"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Teodor Bran <teos@bran.tech>"]
 keywords = ["openid", "oidc", "login", "authentication"]
 license = "Apache-2.0"
