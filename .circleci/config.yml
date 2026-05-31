@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  docker: circleci/docker@3.0.1
+  docker: circleci/docker@4
 
 executors:
   rust-executor:
@@ -137,7 +137,7 @@ jobs:
       - setup_remote_docker:
           docker_layer_caching: true
       - docker/check
-          #registry: $REGISTRY
+        #registry: $REGISTRY
       - docker/build:
           image: ${DOCKER_USER}/$CIRCLE_PROJECT_REPONAME
           tag: ${CIRCLE_SHA1},latest
